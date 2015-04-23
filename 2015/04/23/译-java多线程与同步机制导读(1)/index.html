@@ -4,22 +4,23 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>test | 朱家骅的Blog</title>
+    <title>[译]java多线程与同步机制导读(1) | 朱家骅的Blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="朱家骅">
     
 
     
-    <meta name="description" content="hello world">
+    <meta name="description" content="原文链接 [http://tutorials.jenkov.com/java-concurrency/index.html]早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。多任务的兴起也给开发者">
 <meta property="og:type" content="article">
-<meta property="og:title" content="test">
-<meta property="og:url" content="http://yoursite.com/2015/04/22/test/index.html">
+<meta property="og:title" content="[译]java多线程与同步机制导读(1)">
+<meta property="og:url" content="http://yoursite.com/2015/04/23/译-java多线程与同步机制导读(1)/index.html">
 <meta property="og:site_name" content="朱家骅的Blog">
-<meta property="og:description" content="hello world">
+<meta property="og:description" content="原文链接 [http://tutorials.jenkov.com/java-concurrency/index.html]早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。多任务的兴起也给开发者">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/java-concurrency-tutorial-introduction-1.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="test">
-<meta name="twitter:description" content="hello world">
+<meta name="twitter:title" content="[译]java多线程与同步机制导读(1)">
+<meta name="twitter:description" content="原文链接 [http://tutorials.jenkov.com/java-concurrency/index.html]早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。多任务的兴起也给开发者">
 
     
     
@@ -75,14 +76,14 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/04/22/test/" title="test" itemprop="url">test</a>
+      <a href="/2015/04/23/译-java多线程与同步机制导读(1)/" title="[译]java多线程与同步机制导读(1)" itemprop="url">[译]java多线程与同步机制导读(1)</a>
   </h1>
   <p class="article-author">By
        
 		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
 		
   <p class="article-time">
-    <time datetime="2015-04-22T13:57:41.000Z" itemprop="datePublished"> 发表于 2015-04-22</time>
+    <time datetime="2015-04-23T01:46:40.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
     
   </p>
 </header>
@@ -91,14 +92,23 @@
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
 		
-			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#hello_world"><span class="toc-number">1.</span> <span class="toc-text">hello world</span></a></li></ol>
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#java多线程及同步"><span class="toc-number">1.</span> <span class="toc-text">java多线程及同步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#java同步的发展趋势"><span class="toc-number">2.</span> <span class="toc-text">java同步的发展趋势</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#感想"><span class="toc-number">3.</span> <span class="toc-text">感想</span></a></li></ol>
 		
 		</div>
 		
-		<h3 id="hello_world">hello world</h3>  
+		<p>原文链接 [<a href="http://tutorials.jenkov.com/java-concurrency/index.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/index.html</a>]<br><br><br>早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。<br><br><br>多任务的兴起也给开发者带来了挑战，程序将不再被认为可以一直拥有包括CPU，内存以及其他计算资源了，一个行为良好的进程应该在不需要某些资源时及时释放，以便让其他进程使用。<br><br><br>多线程技术的出现意味着在同一个进程中可以有多个线程并发执行任务，线程成为了计算机运行的最小调度单位，一个线程的执行对应一个CPU的执行，当你在程序中使用了多线程时，就好像在同一个程序中有多个CPU在执行任务。<br><br><br>多线程对某些程序的性能及效率提升有很大的帮助，但是，多线程是一门比多任务更具有挑战性的技术。同一个进程中的多个线程共享同一块内存，由此会出现在单线程程序中不会出现的同时读写内存问题。在单线程程序中，这些错误永远都不会出现，因为两个线程永远不会同时执行。由于现代计算机一般都配备了双核甚至多核CPU，这就意味着多个线程可以同时在多个CPU中执行，这从一定程度上缓解了多线程所带来的困扰。<br><br><br><img src="http://tutorials.jenkov.com/images/java-concurrency/java-concurrency-tutorial-introduction-1.png" alt="多核模型"><br><br><br>当一个线程在读取某个内存单元的值时，另外一个线程同时在向该内存单元写入新值，那么第一个线程将读取的是原值还是另外一个线程写入的新值，或者两者都不是呢？又或者两个线程同时对一个内存单元写入新值，那么最后该内存单元存储的到底是哪个线程写入的值抑或是一个奇怪的值呢？<br><br><br>如果没有采取一定的措施的话，以上的情况都有可能发生，更要命的是这些情况是不可预测的，每次运行结果都会不一样。因此对于开发人员来说，采取合理的措施来控制多线程对其共享的内存资源，文件，数据库的操作是必不可少的，而这也将是本次java同步及多线程系列教程的重点之一。<br><br></p>
+<h3 id="java多线程及同步">java多线程及同步</h3><p>java是率先具备多线程能力的少数几门编程语言之一，开发者可以利用java快速开发多线程程序，因此，java开发者也会遇到上面提到的一系列问题。这也就是我为什么写这篇java教程的原因，不仅仅是自我的总结，同时也将使得像我一样的java开发者从中受益。<br><br><br>这篇教程原本是准备只讲java多线程的，但是多线程中经常出现的问题与分布式系统中的多任务出现的问题非常相似，因此，我干脆把分布式系统中的多任务也加进了教程讲解，所以主旨也从多线程变成了同步。</p>
+<h3 id="java同步的发展趋势">java同步的发展趋势</h3><p>自从第一本讲解java同步机制的书面世以来，世界上出现了许多同步架构和设计，甚至java5也发布了同步组件。<br><br><br>现如今，像Vert.x,Play/AKKA,Qbit这样的异步独享的平台和API开始兴起，这些平台使用了与Java／JEE不同的线程同步模型，共享内存模型以及锁模型。同时，非阻塞的同步算法以及非阻塞的工具，比如LMax Disruptor等也可以被开发者所用。java7中Fork and Join框架也新增了一种函数式串行编程模式，java8中也出现了stream API。<br><br><br>正是因为在java同步技术有如此多的发展促使我开始不得不更新我之前的java同步系列教程。因此，这个教程的编写又被提上了日程，我将利用空闲时间尽快更新并发布，敬请期待！！！<br><br></p>
+<h3 id="感想">感想</h3><p>这是我翻译的第一篇技术博客，中间曾想过放弃，因为有些词汇和语句太难翻译了，看一句翻译一句，感觉每句话都能翻译出来，但是再把整个一段通读一遍，就感觉太生搬硬套了，句与句之间没有连贯性，所以花了很长时间修改，最后感觉稍微好了点，但还是离我的目标相差很远。这只是个开头，相信多翻译几篇，可能自己的翻译水平会提升一点。这次翻译也让自己发现了自己在语言组织方面的不足，以后要多加强训练。至于外文的翻译，争取做到每天一篇吧，加油！</p>
+  
 	</div>
 		<footer class="article-footer clearfix">
 <div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程外文翻译/">Java多线程外文翻译</a>
+</div>
 
 
 </div>
@@ -107,7 +117,7 @@
 
 	<div class="article-share" id="share">
 	
-	  <div data-url="http://yoursite.com/2015/04/22/test/" data-title="test | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  <div data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制导读(1)/" data-title="[译]java多线程与同步机制导读(1) | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
 	  </div>
 	
 	</div>
@@ -120,7 +130,7 @@
 	
 	
 <section id="comments" class="comment">
-	<div class="ds-thread" data-thread-key="2015/04/22/test/" data-title="test" data-url="http://yoursite.com/2015/04/22/test/"></div>
+	<div class="ds-thread" data-thread-key="2015/04/23/译-java多线程与同步机制导读(1)/" data-title="[译]java多线程与同步机制导读(1)" data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制导读(1)/"></div>
 </section>
 
 
@@ -130,7 +140,7 @@
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
  
- <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#hello_world"><span class="toc-number">1.</span> <span class="toc-text">hello world</span></a></li></ol>
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#java多线程及同步"><span class="toc-number">1.</span> <span class="toc-text">java多线程及同步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#java同步的发展趋势"><span class="toc-number">2.</span> <span class="toc-text">java同步的发展趋势</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#感想"><span class="toc-number">3.</span> <span class="toc-text">感想</span></a></li></ol>
  
   </div>
 
@@ -146,6 +156,17 @@
 
 
   
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程外文翻译/" title="Java多线程外文翻译">Java多线程外文翻译<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
 
   <div class="linkslist">
   <p class="asidetitle">友情链接</p>
