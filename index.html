@@ -77,7 +77,66 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/04/23/译-java多线程与同步机制系列2)/" title="[译]java多线程与同步机制系列(2)－－java多线程的优势" itemprop="url">[译]java多线程与同步机制系列(2)－－java多线程的优势</a>
+      <a href="/2015/04/23/译-java多线程与同步机制系列(3)/" title="[译]java多线程与同步机制系列(3)－－多线程的代价" itemprop="url">[译]java多线程与同步机制系列(3)－－多线程的代价</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-04-23T06:33:14.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/costs.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/costs.html</a>)<br><br><br>多线程相对于单线程有优势，但是也有劣势，使用多线程使得我们不得不付出一些代价，因此，不要因为自己了解多线程，就在开发过程中不假思索的使用多线程。应该在开发之前认真思考，是否在该项目中使用多线程的好处会大于坏处。当你对于是否使用多线程感到困惑时，尝试着测试程序的运行效率和响应性来作出确定，而不要仅仅靠猜测！</p>
+<h3 id="更复杂的设计">更复杂的设计</h3><p>在多线程程序中，某些部分的设计确实比单线程设计简单，但是其他部分的设计却比较复杂，比如说对共享内存进行操作的代码编写就需要额外小心谨慎，稍有不慎就会造成严重的后果。线程间的通信很简单的，但是线程同步过程中所发生的错误是很难检测，重现以及修复的。</p>
+<h3 id="过度的上下文切换">过度的上下文切换</h3><p>当CPU从执行一个线程切换到执行另外一个线程时，CPU需要保存当前线程的本地数据，程序计数器等等，然后将即将执行的线程的本地数据和程序计数器等数据载入，这个切换称为“上下文切换”。CPU从一个线程的执行上下文切换到另一个线程的上下文。</p>
+<p>上下文切换代价很大，你肯定不希望在非必要情况下进行线程上下文的切换。</p>
+<p>你可以在维基百科上获得更多关于上下文切换的知识：</p>
+<p>(<a href="http://en.wikipedia.org/wiki/Context_switch" target="_blank" rel="external">http://en.wikipedia.org/wiki/Context_switch</a>)</p>
+<h3 id="资源消耗的增加">资源消耗的增加</h3><p>一个线程运行时需要很多计算机资源，除了CPU运行时间外还需要内存来存放本地栈。除此之外，操作系统也需要消耗一些计算资源来管理这个线程，试试写一个程序在运行时创建1000条线程，这1000条线程什么都不做，但又不结束，然后去查看当程序运行时内存的占用情况。</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/04/23/译-java多线程与同步机制系列(3)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列(3)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/04/23/译-java多线程与同步机制系列(2)/" title="[译]java多线程与同步机制系列(2)－－java多线程的优势" itemprop="url">[译]java多线程与同步机制系列(2)－－java多线程的优势</a>
   </h1>
   <p class="article-author">By
        
@@ -141,7 +200,7 @@
 <div class="comments-count">
 	
 	  	<span></span>
-		<a href="/2015/04/23/译-java多线程与同步机制系列2)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列2)/" data-count-type="comments">&nbsp;</a>
+		<a href="/2015/04/23/译-java多线程与同步机制系列(2)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列(2)/" data-count-type="comments">&nbsp;</a>
 	
 </div>
 
@@ -227,7 +286,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">2</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">3</span></li></ul>
   </div>
 
 
