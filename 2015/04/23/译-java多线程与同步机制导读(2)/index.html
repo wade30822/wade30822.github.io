@@ -4,23 +4,40 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>[译]java多线程与同步机制导读 | 朱家骅的Blog</title>
+    <title>[译]java多线程的优势 | 朱家骅的Blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="朱家骅">
     
 
     
-    <meta name="description" content="原文链接 [http://tutorials.jenkov.com/java-concurrency/index.html]早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。多任务的兴起也给开发者">
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/benefits.html)尽管多线程会带来各种各样的困扰和挑战，但是java多线程开发依然流行，其原因是因为它具有以下优点：
+
+更好的资源利用
+某些场景下简化程序设计
+使程序更具响应性
+
+更好的资源利用想象一个从本地文件系统中读取和处理文件的程序，我们假设读取一个文件需要5秒钟，处理一个文件需要2">
 <meta property="og:type" content="article">
-<meta property="og:title" content="[译]java多线程与同步机制导读">
-<meta property="og:url" content="http://yoursite.com/2015/04/23/译-java多线程与同步机制导读(1)/index.html">
+<meta property="og:title" content="[译]java多线程的优势">
+<meta property="og:url" content="http://yoursite.com/2015/04/23/译-java多线程与同步机制导读(2)/index.html">
 <meta property="og:site_name" content="朱家骅的Blog">
-<meta property="og:description" content="原文链接 [http://tutorials.jenkov.com/java-concurrency/index.html]早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。多任务的兴起也给开发者">
-<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/java-concurrency-tutorial-introduction-1.png">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/benefits.html)尽管多线程会带来各种各样的困扰和挑战，但是java多线程开发依然流行，其原因是因为它具有以下优点：
+
+更好的资源利用
+某些场景下简化程序设计
+使程序更具响应性
+
+更好的资源利用想象一个从本地文件系统中读取和处理文件的程序，我们假设读取一个文件需要5秒钟，处理一个文件需要2">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="[译]java多线程与同步机制导读">
-<meta name="twitter:description" content="原文链接 [http://tutorials.jenkov.com/java-concurrency/index.html]早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。多任务的兴起也给开发者">
+<meta name="twitter:title" content="[译]java多线程的优势">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/benefits.html)尽管多线程会带来各种各样的困扰和挑战，但是java多线程开发依然流行，其原因是因为它具有以下优点：
+
+更好的资源利用
+某些场景下简化程序设计
+使程序更具响应性
+
+更好的资源利用想象一个从本地文件系统中读取和处理文件的程序，我们假设读取一个文件需要5秒钟，处理一个文件需要2">
 
     
     
@@ -76,14 +93,14 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/04/23/译-java多线程与同步机制导读(1)/" title="[译]java多线程与同步机制导读" itemprop="url">[译]java多线程与同步机制导读</a>
+      <a href="/2015/04/23/译-java多线程与同步机制导读(2)/" title="[译]java多线程的优势" itemprop="url">[译]java多线程的优势</a>
   </h1>
   <p class="article-author">By
        
 		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
 		
   <p class="article-time">
-    <time datetime="2015-04-23T01:46:40.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
+    <time datetime="2015-04-23T02:26:57.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
     
   </p>
 </header>
@@ -92,14 +109,37 @@
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
 		
-			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#java多线程及同步"><span class="toc-number">1.</span> <span class="toc-text">java多线程及同步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#java同步的发展趋势"><span class="toc-number">2.</span> <span class="toc-text">java同步的发展趋势</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#感想"><span class="toc-number">3.</span> <span class="toc-text">感想</span></a></li></ol>
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#更好的资源利用"><span class="toc-number">1.</span> <span class="toc-text">更好的资源利用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#更简单的程序设计"><span class="toc-number">2.</span> <span class="toc-text">更简单的程序设计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#响应性"><span class="toc-number">3.</span> <span class="toc-text">响应性</span></a></li></ol>
 		
 		</div>
 		
-		<p>原文链接 [<a href="http://tutorials.jenkov.com/java-concurrency/index.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/index.html</a>]<br><br><br>早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。<br><br><br>多任务的兴起也给开发者带来了挑战，程序将不再被认为可以一直拥有包括CPU，内存以及其他计算资源了，一个行为良好的进程应该在不需要某些资源时及时释放，以便让其他进程使用。<br><br><br>多线程技术的出现意味着在同一个进程中可以有多个线程并发执行任务，线程成为了计算机运行的最小调度单位，一个线程的执行对应一个CPU的执行，当你在程序中使用了多线程时，就好像在同一个程序中有多个CPU在执行任务。<br><br><br>多线程对某些程序的性能及效率提升有很大的帮助，但是，多线程是一门比多任务更具有挑战性的技术。同一个进程中的多个线程共享同一块内存，由此会出现在单线程程序中不会出现的同时读写内存问题。在单线程程序中，这些错误永远都不会出现，因为两个线程永远不会同时执行。由于现代计算机一般都配备了双核甚至多核CPU，这就意味着多个线程可以同时在多个CPU中执行，这从一定程度上缓解了多线程所带来的困扰。<br><br><br><img src="http://tutorials.jenkov.com/images/java-concurrency/java-concurrency-tutorial-introduction-1.png" alt="多核模型"><br><br><br>当一个线程在读取某个内存单元的值时，另外一个线程同时在向该内存单元写入新值，那么第一个线程将读取的是原值还是另外一个线程写入的新值，或者两者都不是呢？又或者两个线程同时对一个内存单元写入新值，那么最后该内存单元存储的到底是哪个线程写入的值抑或是一个奇怪的值呢？<br><br><br>如果没有采取一定的措施的话，以上的情况都有可能发生，更要命的是这些情况是不可预测的，每次运行结果都会不一样。因此对于开发人员来说，采取合理的措施来控制多线程对其共享的内存资源，文件，数据库的操作是必不可少的，而这也将是本次java同步及多线程系列教程的重点之一。<br><br></p>
-<h3 id="java多线程及同步">java多线程及同步</h3><p>java是率先具备多线程能力的少数几门编程语言之一，开发者可以利用java快速开发多线程程序，因此，java开发者也会遇到上面提到的一系列问题。这也就是我为什么写这篇java教程的原因，不仅仅是自我的总结，同时也将使得像我一样的java开发者从中受益。<br><br><br>这篇教程原本是准备只讲java多线程的，但是多线程中经常出现的问题与分布式系统中的多任务出现的问题非常相似，因此，我干脆把分布式系统中的多任务也加进了教程讲解，所以主旨也从多线程变成了同步。</p>
-<h3 id="java同步的发展趋势">java同步的发展趋势</h3><p>自从第一本讲解java同步机制的书面世以来，世界上出现了许多同步架构和设计，甚至java5也发布了同步组件。<br><br><br>现如今，像Vert.x,Play/AKKA,Qbit这样的异步独享的平台和API开始兴起，这些平台使用了与Java／JEE不同的线程同步模型，共享内存模型以及锁模型。同时，非阻塞的同步算法以及非阻塞的工具，比如LMax Disruptor等也可以被开发者所用。java7中Fork and Join框架也新增了一种函数式串行编程模式，java8中也出现了stream API。<br><br><br>正是因为在java同步技术有如此多的发展促使我开始不得不更新我之前的java同步系列教程。因此，这个教程的编写又被提上了日程，我将利用空闲时间尽快更新并发布，敬请期待！！！<br><br></p>
-<h3 id="感想">感想</h3><p>这是我翻译的第一篇技术博客，中间曾想过放弃，因为有些词汇和语句太难翻译了，看一句翻译一句，感觉每句话都能翻译出来，但是再把整个一段通读一遍，就感觉太生搬硬套了，句与句之间没有连贯性，所以花了很长时间修改，最后感觉稍微好了点，但还是离我的目标相差很远。这只是个开头，相信多翻译几篇，可能自己的翻译水平会提升一点。这次翻译也让自己发现了自己在语言组织方面的不足，以后要多加强训练。至于外文的翻译，争取做到每天一篇吧，加油！</p>
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/benefits.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/benefits.html</a>)<br><br><br>尽管多线程会带来各种各样的困扰和挑战，但是java多线程开发依然流行，其原因是因为它具有以下优点：</p>
+<ol>
+<li>更好的资源利用</li>
+<li>某些场景下简化程序设计</li>
+<li>使程序更具响应性</li>
+</ol>
+<h3 id="更好的资源利用">更好的资源利用</h3><p>想象一个从本地文件系统中读取和处理文件的程序，我们假设读取一个文件需要5秒钟，处理一个文件需要2秒钟，那么处理2个文件就需要花费14秒钟：</p>
+<pre><code>5 seconds reading file A
+2 seconds processing file A
+5 seconds reading file B
+<span class="header">2 seconds processing file B
+-----------------------</span>
+14 seconds total
+</code></pre><p>当从磁盘上读取文件的时候，CPU此时便在等待读取文件完成然后继续相关操作，这也就是说这一段时间CPU其实是浪费掉了，它本应该可以执行其他程序。当然，通过调整执行顺序，我们可以优化CPU的执行效率，接下来我们来看看如何优化：</p>
+<pre><code>5 seconds reading file A
+5 seconds reading file B + 2 seconds processing file A
+<span class="header">2 seconds processing file B
+-----------------------</span>
+12 seconds total
+</code></pre><p>当CPU在等待文件B读取完成的时间内，可以处理文件A，这样，CPU就不会被浪费。记住一点：当CPU在等待文件读取的时候它是出于空闲状态的！！！<br><br><br>总之，CPU在等待IO的时候是可以执行其他任务来避免浪费的，不只是磁盘IO，在等待网络IO以及用户输入的时候也是如此。另外记住一点，磁盘IO和网络IO是比CPU与内存之间的IO慢得多的。</p>
+<h3 id="更简单的程序设计">更简单的程序设计</h3><p>如果你是在一个单线程程序中按照以上的读取顺序运行的话，你可以跟踪和控制每个文件的读取和处理状态。但是如果创建两个线程，每个线程负责其中一个文件的读取和处理的话，问题就来了，两个线程中总有一个会在发起文件读取操作时被阻塞，因为此时另外一个线程正在进行IO操作，那么当这个线程在等待的时候，另一个线程就可以占用CPU来处理已经读取到的文件，那么结果就是磁盘就一直处于忙碌状态，不断的将文件从磁盘中传输到内存中。多线程的使用使得CPU和磁盘的效率都有所提升，结果就是整个程序效率的提升。程序设计的简单体现在每个线程只需要处理一个文件。</p>
+<h3 id="响应性">响应性</h3><p>多线程程序相比较单线程程序更具响应性，想象一个从多个端口接受请求的服务器程序，当一个请求到来的时候，它处理完请求后返回继续监听端口，整个服务器的运行框架如下：</p>
+<figure class="highlight vbscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(<span class="built_in">server</span> <span class="keyword">is</span> active)&#123;</span><br><span class="line">    listen <span class="keyword">for</span> <span class="built_in">request</span></span><br><span class="line">    process <span class="built_in">request</span></span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>这就带来了一个问题：当一个请求的处理需要很长时间的话，那么这段时间内新来的请求将无法处理，因为只有当服务器处于监听状态时才能接受请求。<br>一种可行的改进方案时监听线程将接受到的请求传递给一个工作线程处理然后继续监听，工作线程处理请求后将结果返回给客户端，这种设计的框架如下：</p>
+<figure class="highlight vbscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(<span class="built_in">server</span> <span class="keyword">is</span> active)&#123;</span><br><span class="line">  listen <span class="keyword">for</span> <span class="built_in">request</span></span><br><span class="line">  hand <span class="built_in">request</span> <span class="keyword">to</span> worker thread</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这种方式使得服务器监听线程可以不断的接受请求，即使请求源源不断的到来。这使得服务器更具响应性。</p>
+<p>这种模式对桌面程序同样有效。当点击一个按钮开始执行一个长时间任务时，如果是采用单线程，那么执行这个长时间任务的线程就是UI线程，那么此时这个程序给用户造成假死的表象，而实际上，此时程序正在执行一个用户主动请求的任务，这就是不具备响应性的表现。换一种方式，像上面服务器程序一样，把这个长时间任务交给工作线程来执行，UI线程依然能够处理用户的其他请求，工作线程执行完后，通知UI线程更新UI给予用户结果提示，这种依靠工作线程执行复杂耗时任务，UI线程处理用户UI操作的模式更具有我们所说的响应性。</p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -117,7 +157,7 @@
 
 	<div class="article-share" id="share">
 	
-	  <div data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制导读(1)/" data-title="[译]java多线程与同步机制导读 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  <div data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制导读(2)/" data-title="[译]java多线程的优势 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
 	  </div>
 	
 	</div>
@@ -130,20 +170,20 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/04/23/译-java多线程与同步机制导读(2)/" title="[译]java多线程的优势">
-  <strong>上一篇：</strong><br/>
-  <span>
-  [译]java多线程的优势</span>
+
+<div class="next">
+<a href="/2015/04/23/译-java多线程与同步机制导读(1)/"  title="[译]java多线程与同步机制导读">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制导读
+</span>
 </a>
 </div>
-
 
 </nav>
 
 	
 <section id="comments" class="comment">
-	<div class="ds-thread" data-thread-key="2015/04/23/译-java多线程与同步机制导读(1)/" data-title="[译]java多线程与同步机制导读" data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制导读(1)/"></div>
+	<div class="ds-thread" data-thread-key="2015/04/23/译-java多线程与同步机制导读(2)/" data-title="[译]java多线程的优势" data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制导读(2)/"></div>
 </section>
 
 
@@ -153,7 +193,7 @@
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
  
- <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#java多线程及同步"><span class="toc-number">1.</span> <span class="toc-text">java多线程及同步</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#java同步的发展趋势"><span class="toc-number">2.</span> <span class="toc-text">java同步的发展趋势</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#感想"><span class="toc-number">3.</span> <span class="toc-text">感想</span></a></li></ol>
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#更好的资源利用"><span class="toc-number">1.</span> <span class="toc-text">更好的资源利用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#更简单的程序设计"><span class="toc-number">2.</span> <span class="toc-text">更简单的程序设计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#响应性"><span class="toc-number">3.</span> <span class="toc-text">响应性</span></a></li></ol>
  
   </div>
 
