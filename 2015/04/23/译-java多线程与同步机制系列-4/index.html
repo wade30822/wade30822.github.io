@@ -4,22 +4,34 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>朱家骅的Blog</title>
+    <title>[译]java多线程与同步机制系列(4)－－同步模型 | 朱家骅的Blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="朱家骅">
     
 
     
-    <meta name="description">
-<meta property="og:type" content="website">
-<meta property="og:title" content="朱家骅的Blog">
-<meta property="og:url" content="http://yoursite.com/index.html">
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/concurrency-models.html)目前各种操作系统都实现了多种不同的同步模型，同步模型表示在该系统中多个线程是如何协作完成它们各自的任务的。不同的同步模型对任务的划分方式不同，那么线程也可能以不同的方式进行交互与协作，这篇文章将对现如今几种流行的同步模型进行稍微深层次的讲解。
+同步模型">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]java多线程与同步机制系列(4)－－同步模型">
+<meta property="og:url" content="http://yoursite.com/2015/04/23/译-java多线程与同步机制系列-4/index.html">
 <meta property="og:site_name" content="朱家骅的Blog">
-<meta property="og:description">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/concurrency-models.html)目前各种操作系统都实现了多种不同的同步模型，同步模型表示在该系统中多个线程是如何协作完成它们各自的任务的。不同的同步模型对任务的划分方式不同，那么线程也可能以不同的方式进行交互与协作，这篇文章将对现如今几种流行的同步模型进行稍微深层次的讲解。
+同步模型">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-1.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-2.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-3.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-4.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-5.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-5.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-7.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-8.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-8.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="朱家骅的Blog">
-<meta name="twitter:description">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(4)－－同步模型">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/concurrency-models.html)目前各种操作系统都实现了多种不同的同步模型，同步模型表示在该系统中多个线程是如何协作完成它们各自的任务的。不同的同步模型对任务的划分方式不同，那么线程也可能以不同的方式进行交互与协作，这篇文章将对现如今几种流行的同步模型进行稍微深层次的讲解。
+同步模型">
 
     
     
@@ -69,12 +81,10 @@
 </div>
     </header>
     <div id="container">
-      <div id="main">
-
-   
-    
-    <article class="post-expand post" itemprop="articleBody"> 
-        <header class="article-info clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
   <h1 itemprop="name">
     
       <a href="/2015/04/23/译-java多线程与同步机制系列-4/" title="[译]java多线程与同步机制系列(4)－－同步模型" itemprop="url">[译]java多线程与同步机制系列(4)－－同步模型</a>
@@ -88,9 +98,16 @@
     
   </p>
 </header>
-    <div class="article-content">
-        
-        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/concurrency-models.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/concurrency-models.html</a>)<br><br><br>目前各种操作系统都实现了多种不同的同步模型，同步模型表示在该系统中多个线程是如何协作完成它们各自的任务的。不同的同步模型对任务的划分方式不同，那么线程也可能以不同的方式进行交互与协作，这篇文章将对现如今几种流行的同步模型进行稍微深层次的讲解。</p>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#同步模型与分布式系统的相似性"><span class="toc-number">1.</span> <span class="toc-text">同步模型与分布式系统的相似性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#并行工作模型(Paraller_Workers)"><span class="toc-number">2.</span> <span class="toc-text">并行工作模型(Paraller Workers)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#并行工作模型的优点"><span class="toc-number">3.</span> <span class="toc-text">并行工作模型的优点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#并行工作模型的缺点"><span class="toc-number">4.</span> <span class="toc-text">并行工作模型的缺点</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#共享资源所带来的复杂度"><span class="toc-number">4.1.</span> <span class="toc-text">共享资源所带来的复杂度</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#无状态的工作线程"><span class="toc-number">4.2.</span> <span class="toc-text">无状态的工作线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#任务执行顺序的不确定性"><span class="toc-number">4.3.</span> <span class="toc-text">任务执行顺序的不确定性</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#装配流水线模型"><span class="toc-number">5.</span> <span class="toc-text">装配流水线模型</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#响应及事件驱动系统"><span class="toc-number">5.1.</span> <span class="toc-text">响应及事件驱动系统</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Actors_VS_Channels"><span class="toc-number">5.2.</span> <span class="toc-text">Actors VS Channels</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#装配流水线模型的优点"><span class="toc-number">6.</span> <span class="toc-text">装配流水线模型的优点</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#不分享状态"><span class="toc-number">6.1.</span> <span class="toc-text">不分享状态</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#有状态的工作线程"><span class="toc-number">6.2.</span> <span class="toc-text">有状态的工作线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#更好的硬件兼容性"><span class="toc-number">6.3.</span> <span class="toc-text">更好的硬件兼容性</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#任控制务执行顺序成为可能"><span class="toc-number">6.4.</span> <span class="toc-text">任控制务执行顺序成为可能</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#装配流水线模型的缺点"><span class="toc-number">7.</span> <span class="toc-text">装配流水线模型的缺点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#并行化函数"><span class="toc-number">8.</span> <span class="toc-text">并行化函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#哪种同步模型最好"><span class="toc-number">9.</span> <span class="toc-text">哪种同步模型最好</span></a></li></ol>
+		
+		</div>
+		
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/concurrency-models.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/concurrency-models.html</a>)<br><br><br>目前各种操作系统都实现了多种不同的同步模型，同步模型表示在该系统中多个线程是如何协作完成它们各自的任务的。不同的同步模型对任务的划分方式不同，那么线程也可能以不同的方式进行交互与协作，这篇文章将对现如今几种流行的同步模型进行稍微深层次的讲解。</p>
 <h3 id="同步模型与分布式系统的相似性">同步模型与分布式系统的相似性</h3><p>这篇文章中将讲到的同步模型与分布式系统中使用的架构有许多相似点。在一个同步系统中，不同的线程之间交互，在一个分布式系统中，不同的进程之间交互(进程可能位于不同的计算机中)。线程与进程在性质上是相似的，这也是为什么同步模型和分布式系统架构是如此相似的原因。<br><br><br>当然分布式系统会遇到一些额外的挑战，比如说网络突然故障或者一台远程计算机发生宕机等等。当时一个运行在服务器上同步系统也会遇到各种各样的问题，比如CPU异常，网络异常，磁盘读写异常等等，虽然这些问题发生的概率相对很低，但理论上还是会发生的。<br><br><br>正是因为同步模型与分布式系统的相似性，所以两者之间经常相互取长补短。比如说同步系统中的工作线程模型近似于分布式系统中的负载均衡模型，工作线程模型就是将任务分配到不同的工作线程去执行，而与之相似的是分布式系统中负载均衡的作用就是将请求转发给相对空闲的服务器。在异常处理方面，比如说日志记录，异常处理，任务幂等性(译者注：幂等性的意思是就是任务的不变性，维基百科给的定义是程序一旦初始化后，一个方法经过多次的调用运行，它的结果不会发生改变。意思是比如一个方法的作用是给一个变量赋值为123，那么它就不会把他赋值为456，方法幂等性可以减少异常发生概率)。</p>
 <h3 id="并行工作模型(Paraller_Workers)">并行工作模型(Paraller Workers)</h3><p>第一个我要介绍的同步模型叫做并行工作模型，不同的任务被分配给不同的工作线程处理，如下图所示：</p>
 <p><img src="http://tutorials.jenkov.com/images/java-concurrency/concurrency-models-1.png" alt="并行工作模型"></p>
@@ -134,14 +151,9 @@
 <h3 id="装配流水线模型的缺点">装配流水线模型的缺点</h3><p>装配流水线模型的主要缺点是一个任务被多个工作线程轮流执行，而这些工作线程可能分布在项目中多个类中，这就带来了一个问题：对于一个给定的任务很难跟踪到一个给定时间点正在执行的任务代码。<br><br><br>另外，工作线程的代码很难编写。由于工作线程的代码都被写在回调函数里面，代码中出现许多嵌套的回调函数可能会出现被程序员称为回调地狱的问题。回调地狱问题会使得我们很难追踪到当前实在执行哪个回调函数的哪一段代码，同时也很难确保回调函数能正确获得它需要的数据(译者注：可能是变量作用域问题，作者在这里所说的应该是程序员可能会被层层回调搞迷糊，从而使得代码中引用了超过变量作用域的变量，这可以通过严谨的代码编写和审查避免)。<br><br><br>如果是并行工作模式的话，情况会好很多，我们可以直接打开源代码文件来查看一个工作线程的所有代码，虽然工作线程代码也有可能分布在各个类中，但是相对而言比较容易阅读。</p>
 <h3 id="并行化函数">并行化函数</h3><p>第三种我要讲的同步模型是并行化函数。<br><br><br>并行化函数的基本思想是把函数看作是worker或者actor，函数的调用就类比于actor之间相互传递信息，这个应该很容易理解。<br><br><br>由于传递给函数的参数是值传递，也就是说传递的是一个副本，这样就避免了数据竞争，这样每个函数运行就相当于一个原子操作，每个函数独立于其他函数运行。<br><br><br>一个函数可以独立于其他函数运行，同时它也能在单独的CPU上运行，这就意味着一个由多个函数实现的算法可以并行的在多个CPU上运行。<br><br><br>在java7中java.util.concurrent包提供了一个叫做ForkAndJoinPool类可以帮助你实现类似于并行化函数的结构，在java8中并行化的stream API可以使你并行化的迭代队列。当然，也有很多开发者对ForjAndJoin是持怀疑态度的。<br><br><br>并行化函数最困难的一点是搞清楚哪些函数进行并行化，要知道跨CPU的函数调用消耗巨大，这就要求我们通过正确的任务划分，将每个函数的任务范围做的相对精确，才能使并行化函数所带来的效率提升大过CPU间的函数调用的资源消耗。如果每个函数的任务划分过小，那么并行化的执行函数可能结果比单线程，单CPU的执行结果还要差。<br><br><br>在我看来，可以将之前提到的响应或者事件驱动模型与并行化函数模型来结合使用，使用事件驱动模型可以让你能够自己控制那些函数并行化执行。(译者注：我的理解是事件驱动模型中一般会在worker之间添加管道这个中间件，而所谓的控制函数并行化执行的关键就在于这个中间件。我曾经使用过java的stream API，stream API属于java8新增的lambda函数式编程范畴，它的作用是在遍历一个链表的时候，会同时开启多个线程进行遍历，可想而知，如果链表很长的话，stream API的使用会大大提高遍历效率，而回到事件驱动模型中来，在channels中我们可以做类似stream API开启多个线程的操作，同时我们还可以加入自己的控制逻辑，比如让哪些线程函数先运行。)<br><br><br>除此之外，将任务进行分割给多个函数并在多个CPU中并发执行只在当前只有该任务执行时才有意义。但是，如果系统中同时有多个任务在运(比如说web服务器，数据库服务器等其他程序)，那么并行化一个任务就变的没有意义，因为一部分CPU都在执行其他任务，完全没有必要去打断它们执行其他任务而让它们来执行相对较慢的并行任务。在这种情况下，最好使用流水线同步模型，因为它更像是一个单线程程序并且与底层硬件结构相适应。</p>
 <h3 id="哪种同步模型最好">哪种同步模型最好</h3><p>那么，哪种同步模型最好呢？？？<br><br><br>一般情况下，这个问题的答案是这得根据实际情况来作出选择。如果你的任务是可并行化的，独立的，不需要共享数据的，那么你最好选择并行工作模式。<br><br><br>如果你的任务不是很明显的可并行化或独立的话，那么你可以考虑装配流水线同步模型，在这种情况下使用这种模型优点大于缺点，同时比并行工作模式更适合。并且如果你采用流水线模型的话，你不用编写很多模型相关的代码，因为想Vert.x这样的框架已经为你提供了一整套框架代码，你只需要写业务逻辑代码就好了，是不是很方便？？？</p>
-
-        
-        
-        <p class="article-more-link">
-          
-       </p>
-    </div>
-    <footer class="article-footer clearfix">
+  
+	</div>
+		<footer class="article-footer clearfix">
 <div class="article-catetags">
 
 <div class="article-categories">
@@ -154,236 +166,47 @@
 
 
 
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制系列-4/" data-title="[译]java多线程与同步机制系列(4)－－同步模型 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  </div>
+	
+	</div>
 
-<div class="comments-count">
-	
-	  	<span></span>
-		<a href="/2015/04/23/译-java多线程与同步机制系列-4/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列-4/" data-count-type="comments">&nbsp;</a>
-	
-</div>
 
 </footer>
 
-
-    </article>
-
-
-
-
-
-
-   
-    
-    <article class="post-expand post" itemprop="articleBody"> 
-        <header class="article-info clearfix">
-  <h1 itemprop="name">
-    
-      <a href="/2015/04/23/译-java多线程与同步机制系列(3)/" title="[译]java多线程与同步机制系列(3)－－多线程的代价" itemprop="url">[译]java多线程与同步机制系列(3)－－多线程的代价</a>
-  </h1>
-  <p class="article-author">By
-       
-		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
-		
-  <p class="article-time">
-    <time datetime="2015-04-23T06:33:14.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
-    
-  </p>
-</header>
-    <div class="article-content">
-        
-        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/costs.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/costs.html</a>)<br><br><br>多线程相对于单线程有优势，但是也有劣势，使用多线程使得我们不得不付出一些代价，因此，不要因为自己了解多线程，就在开发过程中不假思索的使用多线程。应该在开发之前认真思考，是否在该项目中使用多线程的好处会大于坏处。当你对于是否使用多线程感到困惑时，尝试着测试程序的运行效率和响应性来作出确定，而不要仅仅靠猜测！</p>
-<h3 id="更复杂的设计">更复杂的设计</h3><p>在多线程程序中，某些部分的设计确实比单线程设计简单，但是其他部分的设计却比较复杂，比如说对共享内存进行操作的代码编写就需要额外小心谨慎，稍有不慎就会造成严重的后果。线程间的通信很简单的，但是线程同步过程中所发生的错误是很难检测，重现以及修复的。</p>
-<h3 id="过度的上下文切换">过度的上下文切换</h3><p>当CPU从执行一个线程切换到执行另外一个线程时，CPU需要保存当前线程的本地数据，程序计数器等等，然后将即将执行的线程的本地数据和程序计数器等数据载入，这个切换称为“上下文切换”。CPU从一个线程的执行上下文切换到另一个线程的上下文。</p>
-<p>上下文切换代价很大，你肯定不希望在非必要情况下进行线程上下文的切换。</p>
-<p>你可以在维基百科上获得更多关于上下文切换的知识：</p>
-<p>(<a href="http://en.wikipedia.org/wiki/Context_switch" target="_blank" rel="external">http://en.wikipedia.org/wiki/Context_switch</a>)</p>
-<h3 id="资源消耗的增加">资源消耗的增加</h3><p>一个线程运行时需要很多计算机资源，除了CPU运行时间外还需要内存来存放本地栈。除此之外，操作系统也需要消耗一些计算资源来管理这个线程，试试写一个程序在运行时创建1000条线程，这1000条线程什么都不做，但又不结束，然后去查看当程序运行时内存的占用情况。</p>
-
-        
-        
-        <p class="article-more-link">
-          
-       </p>
-    </div>
-    <footer class="article-footer clearfix">
-<div class="article-catetags">
-
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
-</div>
-
-
-</div>
-
-
-
-
-<div class="comments-count">
+   	       
+	</article>
 	
-	  	<span></span>
-		<a href="/2015/04/23/译-java多线程与同步机制系列(3)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列(3)/" data-count-type="comments">&nbsp;</a>
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/04/23/译-java多线程与同步机制系列(3)/"  title="[译]java多线程与同步机制系列(3)－－多线程的代价">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制系列(3)－－多线程的代价
+</span>
+</a>
+</div>
+
+</nav>
+
 	
-</div>
-
-</footer>
-
-
-    </article>
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/04/23/译-java多线程与同步机制系列-4/" data-title="[译]java多线程与同步机制系列(4)－－同步模型" data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制系列-4/"></div>
+</section>
 
 
-
-
-
-
-   
-    
-    <article class="post-expand post" itemprop="articleBody"> 
-        <header class="article-info clearfix">
-  <h1 itemprop="name">
-    
-      <a href="/2015/04/23/译-java多线程与同步机制系列(2)/" title="[译]java多线程与同步机制系列(2)－－java多线程的优势" itemprop="url">[译]java多线程与同步机制系列(2)－－java多线程的优势</a>
-  </h1>
-  <p class="article-author">By
-       
-		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
-		
-  <p class="article-time">
-    <time datetime="2015-04-23T02:26:57.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
-    
-  </p>
-</header>
-    <div class="article-content">
-        
-        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/benefits.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/benefits.html</a>)<br><br><br>尽管多线程会带来各种各样的困扰和挑战，但是java多线程开发依然流行，其原因是因为它具有以下优点：</p>
-<ol>
-<li>更好的资源利用</li>
-<li>某些场景下简化程序设计</li>
-<li>使程序更具响应性</li>
-</ol>
-<h3 id="更好的资源利用">更好的资源利用</h3><p>想象一个从本地文件系统中读取和处理文件的程序，我们假设读取一个文件需要5秒钟，处理一个文件需要2秒钟，那么处理2个文件就需要花费14秒钟：</p>
-<pre><code>5 seconds reading file A
-2 seconds processing file A
-5 seconds reading file B
-<span class="header">2 seconds processing file B
------------------------</span>
-14 seconds total
-</code></pre><p>当从磁盘上读取文件的时候，CPU此时便在等待读取文件完成然后继续相关操作，这也就是说这一段时间CPU其实是浪费掉了，它本应该可以执行其他程序。当然，通过调整执行顺序，我们可以优化CPU的执行效率，接下来我们来看看如何优化：</p>
-<pre><code>5 seconds reading file A
-5 seconds reading file B + 2 seconds processing file A
-<span class="header">2 seconds processing file B
------------------------</span>
-12 seconds total
-</code></pre><p>当CPU在等待文件B读取完成的时间内，可以处理文件A，这样，CPU就不会被浪费。记住一点：当CPU在等待文件读取的时候它是出于空闲状态的！！！<br><br><br>总之，CPU在等待IO的时候是可以执行其他任务来避免浪费的，不只是磁盘IO，在等待网络IO以及用户输入的时候也是如此。另外记住一点，磁盘IO和网络IO是比CPU与内存之间的IO慢得多的。</p>
-<h3 id="更简单的程序设计">更简单的程序设计</h3><p>如果你是在一个单线程程序中按照以上的读取顺序运行的话，你可以跟踪和控制每个文件的读取和处理状态。但是如果创建两个线程，每个线程负责其中一个文件的读取和处理的话，问题就来了，两个线程中总有一个会在发起文件读取操作时被阻塞，因为此时另外一个线程正在进行IO操作，那么当这个线程在等待的时候，另一个线程就可以占用CPU来处理已经读取到的文件，那么结果就是磁盘就一直处于忙碌状态，不断的将文件从磁盘中传输到内存中。多线程的使用使得CPU和磁盘的效率都有所提升，结果就是整个程序效率的提升。程序设计的简单体现在每个线程只需要处理一个文件。</p>
-<h3 id="响应性">响应性</h3><p>多线程程序相比较单线程程序更具响应性，想象一个从多个端口接受请求的服务器程序，当一个请求到来的时候，它处理完请求后返回继续监听端口，整个服务器的运行框架如下：</p>
-<figure class="highlight vbscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(<span class="built_in">server</span> <span class="keyword">is</span> active)&#123;</span><br><span class="line">    listen <span class="keyword">for</span> <span class="built_in">request</span></span><br><span class="line">    process <span class="built_in">request</span></span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
-<p>这就带来了一个问题：当一个请求的处理需要很长时间的话，那么这段时间内新来的请求将无法处理，因为只有当服务器处于监听状态时才能接受请求。<br>一种可行的改进方案时监听线程将接受到的请求传递给一个工作线程处理然后继续监听，工作线程处理请求后将结果返回给客户端，这种设计的框架如下：</p>
-<figure class="highlight vbscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(<span class="built_in">server</span> <span class="keyword">is</span> active)&#123;</span><br><span class="line">  listen <span class="keyword">for</span> <span class="built_in">request</span></span><br><span class="line">  hand <span class="built_in">request</span> <span class="keyword">to</span> worker thread</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>这种方式使得服务器监听线程可以不断的接受请求，即使请求源源不断的到来。这使得服务器更具响应性。</p>
-<p>这种模式对桌面程序同样有效。当点击一个按钮开始执行一个长时间任务时，如果是采用单线程，那么执行这个长时间任务的线程就是UI线程，那么此时这个程序给用户造成假死的表象，而实际上，此时程序正在执行一个用户主动请求的任务，这就是不具备响应性的表现。换一种方式，像上面服务器程序一样，把这个长时间任务交给工作线程来执行，UI线程依然能够处理用户的其他请求，工作线程执行完后，通知UI线程更新UI给予用户结果提示，这种依靠工作线程执行复杂耗时任务，UI线程处理用户UI操作的模式更具有我们所说的响应性。</p>
-
-        
-        
-        <p class="article-more-link">
-          
-       </p>
-    </div>
-    <footer class="article-footer clearfix">
-<div class="article-catetags">
-
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
-</div>
-
-
-</div>
-
-
-
-
-<div class="comments-count">
-	
-	  	<span></span>
-		<a href="/2015/04/23/译-java多线程与同步机制系列(2)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列(2)/" data-count-type="comments">&nbsp;</a>
-	
-</div>
-
-</footer>
-
-
-    </article>
-
-
-
-
-
-
-   
-    
-    <article class="post-expand post" itemprop="articleBody"> 
-        <header class="article-info clearfix">
-  <h1 itemprop="name">
-    
-      <a href="/2015/04/23/译-java多线程与同步机制系列(1)/" title="[译]java多线程与同步机制系列(1)－－综述" itemprop="url">[译]java多线程与同步机制系列(1)－－综述</a>
-  </h1>
-  <p class="article-author">By
-       
-		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
-		
-  <p class="article-time">
-    <time datetime="2015-04-23T01:46:40.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
-    
-  </p>
-</header>
-    <div class="article-content">
-        
-        <p>原文链接 [<a href="http://tutorials.jenkov.com/java-concurrency/index.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/index.html</a>]<br><br><br>早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。<br><br><br>多任务的兴起也给开发者带来了挑战，程序将不再被认为可以一直拥有包括CPU，内存以及其他计算资源了，一个行为良好的进程应该在不需要某些资源时及时释放，以便让其他进程使用。<br><br><br>多线程技术的出现意味着在同一个进程中可以有多个线程并发执行任务，线程成为了计算机运行的最小调度单位，一个线程的执行对应一个CPU的执行，当你在程序中使用了多线程时，就好像在同一个程序中有多个CPU在执行任务。<br><br><br>多线程对某些程序的性能及效率提升有很大的帮助，但是，多线程是一门比多任务更具有挑战性的技术。同一个进程中的多个线程共享同一块内存，由此会出现在单线程程序中不会出现的同时读写内存问题。在单线程程序中，这些错误永远都不会出现，因为两个线程永远不会同时执行。由于现代计算机一般都配备了双核甚至多核CPU，这就意味着多个线程可以同时在多个CPU中执行，这从一定程度上缓解了多线程所带来的困扰。<br><br><br><img src="http://tutorials.jenkov.com/images/java-concurrency/java-concurrency-tutorial-introduction-1.png" alt="多核模型"><br><br><br>当一个线程在读取某个内存单元的值时，另外一个线程同时在向该内存单元写入新值，那么第一个线程将读取的是原值还是另外一个线程写入的新值，或者两者都不是呢？又或者两个线程同时对一个内存单元写入新值，那么最后该内存单元存储的到底是哪个线程写入的值抑或是一个奇怪的值呢？<br><br><br>如果没有采取一定的措施的话，以上的情况都有可能发生，更要命的是这些情况是不可预测的，每次运行结果都会不一样。因此对于开发人员来说，采取合理的措施来控制多线程对其共享的内存资源，文件，数据库的操作是必不可少的，而这也将是本次java同步及多线程系列教程的重点之一。<br><br></p>
-<h3 id="java多线程及同步">java多线程及同步</h3><p>java是率先具备多线程能力的少数几门编程语言之一，开发者可以利用java快速开发多线程程序，因此，java开发者也会遇到上面提到的一系列问题。这也就是我为什么写这篇java教程的原因，不仅仅是自我的总结，同时也将使得像我一样的java开发者从中受益。<br><br><br>这篇教程原本是准备只讲java多线程的，但是多线程中经常出现的问题与分布式系统中的多任务出现的问题非常相似，因此，我干脆把分布式系统中的多任务也加进了教程讲解，所以主旨也从多线程变成了同步。</p>
-<h3 id="java同步的发展趋势">java同步的发展趋势</h3><p>自从第一本讲解java同步机制的书面世以来，世界上出现了许多同步架构和设计，甚至java5也发布了同步组件。<br><br><br>现如今，像Vert.x,Play/AKKA,Qbit这样的异步独享的平台和API开始兴起，这些平台使用了与Java／JEE不同的线程同步模型，共享内存模型以及锁模型。同时，非阻塞的同步算法以及非阻塞的工具，比如LMax Disruptor等也可以被开发者所用。java7中Fork and Join框架也新增了一种函数式串行编程模式，java8中也出现了stream API。<br><br><br>正是因为在java同步技术有如此多的发展促使我开始不得不更新我之前的java同步系列教程。因此，这个教程的编写又被提上了日程，我将利用空闲时间尽快更新并发布，敬请期待！！！<br><br></p>
-<h3 id="感想">感想</h3><p>这是我翻译的第一篇技术博客，中间曾想过放弃，因为有些词汇和语句太难翻译了，看一句翻译一句，感觉每句话都能翻译出来，但是再把整个一段通读一遍，就感觉太生搬硬套了，句与句之间没有连贯性，所以花了很长时间修改，最后感觉稍微好了点，但还是离我的目标相差很远。这只是个开头，相信多翻译几篇，可能自己的翻译水平会提升一点。这次翻译也让自己发现了自己在语言组织方面的不足，以后要多加强训练。至于外文的翻译，争取做到每天一篇吧，加油！</p>
-
-        
-        
-        <p class="article-more-link">
-          
-       </p>
-    </div>
-    <footer class="article-footer clearfix">
-<div class="article-catetags">
-
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
-</div>
-
-
-</div>
-
-
-
-
-<div class="comments-count">
-	
-	  	<span></span>
-		<a href="/2015/04/23/译-java多线程与同步机制系列(1)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列(1)/" data-count-type="comments">&nbsp;</a>
-	
-</div>
-
-</footer>
-
-
-    </article>
-
-
-
-
-
-
-
-</div>
+</div>  
       <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#同步模型与分布式系统的相似性"><span class="toc-number">1.</span> <span class="toc-text">同步模型与分布式系统的相似性</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#并行工作模型(Paraller_Workers)"><span class="toc-number">2.</span> <span class="toc-text">并行工作模型(Paraller Workers)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#并行工作模型的优点"><span class="toc-number">3.</span> <span class="toc-text">并行工作模型的优点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#并行工作模型的缺点"><span class="toc-number">4.</span> <span class="toc-text">并行工作模型的缺点</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#共享资源所带来的复杂度"><span class="toc-number">4.1.</span> <span class="toc-text">共享资源所带来的复杂度</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#无状态的工作线程"><span class="toc-number">4.2.</span> <span class="toc-text">无状态的工作线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#任务执行顺序的不确定性"><span class="toc-number">4.3.</span> <span class="toc-text">任务执行顺序的不确定性</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#装配流水线模型"><span class="toc-number">5.</span> <span class="toc-text">装配流水线模型</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#响应及事件驱动系统"><span class="toc-number">5.1.</span> <span class="toc-text">响应及事件驱动系统</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#Actors_VS_Channels"><span class="toc-number">5.2.</span> <span class="toc-text">Actors VS Channels</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#装配流水线模型的优点"><span class="toc-number">6.</span> <span class="toc-text">装配流水线模型的优点</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#不分享状态"><span class="toc-number">6.1.</span> <span class="toc-text">不分享状态</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#有状态的工作线程"><span class="toc-number">6.2.</span> <span class="toc-text">有状态的工作线程</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#更好的硬件兼容性"><span class="toc-number">6.3.</span> <span class="toc-text">更好的硬件兼容性</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#任控制务执行顺序成为可能"><span class="toc-number">6.4.</span> <span class="toc-text">任控制务执行顺序成为可能</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#装配流水线模型的缺点"><span class="toc-number">7.</span> <span class="toc-text">装配流水线模型的缺点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#并行化函数"><span class="toc-number">8.</span> <span class="toc-text">并行化函数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#哪种同步模型最好"><span class="toc-number">9.</span> <span class="toc-text">哪种同步模型最好</span></a></li></ol>
+ 
+  </div>
 
 <div id="asidepart">
 <div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
@@ -515,12 +338,69 @@ $(document).ready(function(){
       m.removeClass('moveMain');
       a.css('display', 'block').removeClass('fadeOut');
       o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
         
     }
   });
 });
 </script>
 
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
 
 
 
@@ -593,4 +473,4 @@ $(document).ready(function(){
 <!-- Tiny_search End -->
 
   </body>
- </html>
+</html>
