@@ -77,7 +77,103 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/04/23/译-java多线程与同步机制系列-4/" title="[译]java多线程与同步机制系列(4)－－同步模型" itemprop="url">[译]java多线程与同步机制系列(4)－－同步模型</a>
+      <a href="/2015/04/24/译-java多线程与同步机制系列(5)/" title="[译]java多线程与同步机制系列(5)－－创建和开启线程" itemprop="url">[译]java多线程与同步机制系列(5)－－创建和开启线程</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-04-24T12:49:45.000Z" itemprop="datePublished"> 发表于 2015-04-24</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/creating-and-starting-threads.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/creating-and-starting-threads.html</a>)</p>
+<p>java线程其实就是普通的java对象，具体来说是java.lang.Thread类及其子类的实例。</p>
+<h3 id="创建和启动线程">创建和启动线程</h3><p>创建一个线程的代码如下所示：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span> <span class="keyword">thread</span> <span class="subst">=</span> <span class="literal">new</span> <span class="keyword">Thread</span>();</span><br></pre></td></tr></table></figure>
+<p>启动线程的话调用thread对象的start方法即可，代码如下所示：</p>
+<figure class="highlight dos"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">thread.<span class="built_in">start</span>();</span><br></pre></td></tr></table></figure>
+<p>上述代码中没有编写线程具体要执行的代码，所以线程启动后将立刻停止。</p>
+<p>有两种方式来定义线程的执行代码，其中一种是继承Thread类并覆写run方法，另外一种是实现Runnable接口，并将该runnable对象以构造函数参数的方式传给Thread对象。接下来将具体讲讲这两种方式。<br><br></p>
+<h2 id="Thread子类">Thread子类</h2><p>第一种方式是继承Thread类并覆写run方法即在run方法中编写该线程需要执行的任务代码，run方法将会在调用thread的start方法后开始执行。下面是一个例子：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">public <span class="class"><span class="keyword">class</span> <span class="title">MyThread</span> <span class="keyword"><span class="keyword">extends</span></span> <span class="title">Thread</span> &#123;</span></span><br><span class="line"></span><br><span class="line">    public void run()&#123;</span><br><span class="line">       <span class="type">System</span>.out.println(<span class="string">"MyThread running"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>创建上面的MyThread并且启动线程的代码如下：</p>
+<figure class="highlight ocaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">MyThread</span> myThread = <span class="keyword">new</span> <span class="type">MyThread</span><span class="literal">()</span>;</span><br><span class="line"> myTread.start<span class="literal">()</span>;</span><br></pre></td></tr></table></figure>
+<p>start方法启动线程后会立即返回，它不会一直等到run方法执行完成后才返回，myThread线程的run方法开始执行，它与主线程并行执行给人的感觉是它在另外一个CPU上执行，当run方法执行时会在标准输出界面输出“MyThread running”。</p>
+<p>你也可以写成如下这种形式：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span> <span class="keyword">thread</span> <span class="subst">=</span> <span class="literal">new</span> <span class="keyword">Thread</span>()&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="literal">void</span> run()&#123;</span><br><span class="line">      System<span class="built_in">.</span>out<span class="built_in">.</span>println(<span class="string">"Thread Running"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">thread</span><span class="built_in">.</span>start();</span><br></pre></td></tr></table></figure>
+<p>上述代码在运行时将在标准输出界面上输出“Thread running”。<br><br></p>
+<h3 id="实现Runnable接口">实现Runnable接口</h3><p>第二种方式便是实现Runnable接口并将自定义代码写入run方法中，然后创建一个实现了Runnable接口的类的对象，将该对象以构造函数参数传给Thread的构造函数，当调用线程对象的start方法时，传入thread对象的runnable对象的run方法将被执行。相关代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyRunnable</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">      System.out.println(<span class="string">"MyRunnable running"</span>);</span><br><span class="line">   &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>将MyRunable类的对象传入Thread构造函数并调用thread的start方法：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span> <span class="keyword">thread</span> <span class="subst">=</span> <span class="literal">new</span> <span class="keyword">Thread</span>(<span class="literal">new</span> MyRunnable());</span><br><span class="line">  <span class="keyword">thread</span><span class="built_in">.</span>start();</span><br></pre></td></tr></table></figure>
+<p>当该线程启动时，它会执行myRunnable的run方法而不是它自己的run方法，所以上述代码运行后将在标准输出界面输出“MyRunable running”。你也可以使用如下这种代码组织形式：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">Runnable myRunnable <span class="subst">=</span> <span class="literal">new</span> Runnable()&#123;</span><br><span class="line"></span><br><span class="line">     <span class="keyword">public</span> <span class="literal">void</span> run()&#123;</span><br><span class="line">        System<span class="built_in">.</span>out<span class="built_in">.</span>println(<span class="string">"Runnable running"</span>);</span><br><span class="line">     &#125;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">   <span class="keyword">Thread</span> <span class="keyword">thread</span> <span class="subst">=</span> <span class="literal">new</span> <span class="keyword">Thread</span>(myRunnable);</span><br><span class="line">   <span class="keyword">thread</span><span class="built_in">.</span>start();</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h3 id="继承还是实现？">继承还是实现？</h3><p>我们没有办法判断这两种方式孰优孰劣，因为它们都能很好的实现我们的需求。但是从我个人看来，我更倾向于使用第二种方法，也就是通过实现Runnable接口来写入业务代码。如果我们使用到了线程池的话，那么可以将所有需要执行的Runnable对象组成一个队列，一旦线程池中出现了空闲线程的话，就可以从队列中拿出一个Runnable对象给该空闲线程去执行，而如果采取第一种方式即子类化Thread，就没法像第二种方式那么灵活。<br><br><br>在某些情况下，你有可能需要同时使用这两种方式。比如说创建一个能执行多个Runnable的线程子类对象，而这就是线程池的设计原理。<br><br></p>
+<h3 id="陷阱：start而非run">陷阱：start而非run</h3><p>当创建并启动一个线程的时候，开发者常常会范一个很严重的错误：调用run方法而不是start方法，代码如下：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span> newThread <span class="subst">=</span> <span class="literal">new</span> <span class="keyword">Thread</span>(MyRunnable());</span><br><span class="line">newThread<span class="built_in">.</span>run();  <span class="comment">//should be start();</span></span><br></pre></td></tr></table></figure>
+<p>一开始你可能没有察觉，因为你认为MyRunnable对象的run方法执行了，但实际上run方法不是被你创建的线程执行，而是被创建线程的线程执行了，换句话说就是被执行上面两句代码的线程执行了MyRunnable对象的run方法，所以你如果想要新建的对象执行MyRunnable对象的run方法的话，必须改写成newThread.start()；<br><br></p>
+<h3 id="线程名字">线程名字</h3><p>当你创建线程时可以给每个线程取一个名字用来区分不同的线程。比如如果同时有多个线程需要在标准输出界面输出信息的话，线程名就显得尤为重要。下面这段代码演示了如何给线程赋予一个名字：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span> <span class="keyword">thread</span> <span class="subst">=</span> <span class="literal">new</span> <span class="keyword">Thread</span>(<span class="string">"New Thread"</span>) &#123;</span><br><span class="line">     <span class="keyword">public</span> <span class="literal">void</span> run()&#123;</span><br><span class="line">       System<span class="built_in">.</span>out<span class="built_in">.</span>println(<span class="string">"run by: "</span> <span class="subst">+</span> getname());</span><br><span class="line">     &#125;</span><br><span class="line">  &#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="keyword">thread</span><span class="built_in">.</span>start();</span><br><span class="line">  System<span class="built_in">.</span>out<span class="built_in">.</span>println(<span class="keyword">thread</span><span class="built_in">.</span>getName());</span><br></pre></td></tr></table></figure>
+<p>从上面的代码可以看出，给一个线程取名字就是将名字以构造函数参数的形式赋给线程构造函数。当然，线程创建后也可以通过getName方法获取线程的名字。当线程构造函数参数中还有Runnable对象时，就应该写成如下代码一样同时将Runable对象和线程名传给线程构造函数：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">MyRunnable runnable <span class="subst">=</span> <span class="literal">new</span> MyRunnable();</span><br><span class="line"><span class="keyword">Thread</span> <span class="keyword">thread</span> <span class="subst">=</span> <span class="literal">new</span> <span class="keyword">Thread</span>(runnable, <span class="string">"New Thread"</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">thread</span><span class="built_in">.</span>start();</span><br><span class="line">System<span class="built_in">.</span>out<span class="built_in">.</span>println(<span class="keyword">thread</span><span class="built_in">.</span>getName());</span><br></pre></td></tr></table></figure>
+<p>这里要注意的是，Runnable接口中没有提供方法像getName一样获取执行它的线程名，所以当我们需要知道当前执行线程的时候，可以调用Thread的静态函数currentThread方法，如下所示：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span><span class="built_in">.</span>currentThread();</span><br></pre></td></tr></table></figure>
+<p>如果想获得当前执行线程的名字的时候，可以在上述代码的基础上继续调用getName方法，如下所示：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">String</span> threadName <span class="subst">=</span> <span class="keyword">Thread</span><span class="built_in">.</span>currentThread<span class="built_in">.</span>getName();</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h3 id="Java线程举例">Java线程举例</h3><p>接下来是一个简单的java线程的例子。首先输出主线程的线程名，主线程是由java虚拟机创建的。然后在主线程中创建10个子线程，每个线程的名字是从0开始逐个递增，每个线程执行结果是在标准输出界面输出自己的名字，代码如下：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ThreadExample</span> &#123;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">    System.<span class="keyword">out</span>.println(Thread.currentThread().getName());</span><br><span class="line">    <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>; i&lt;<span class="number">10</span>; i++)&#123;</span><br><span class="line">      <span class="keyword">new</span> Thread(<span class="string">""</span> + i)&#123;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">          System.<span class="keyword">out</span>.println(<span class="string">"Thread: "</span> + getName() + <span class="string">" running"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;.start();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里我们需要注意的是，虽然线程是按照从1到10的顺序创建并启动的，但是实际上它们可能不会按照创建顺序执行了，比如说1号线程就不一定第一个在标准输出界面输出自己的名字了。这是因为所有的线程理论上是并行执行而不是串行执行的，java虚拟机或者操作系统决定了线程的执行顺序，这个顺序不必与它们的启动顺序相同。</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/04/24/译-java多线程与同步机制系列(5)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/24/译-java多线程与同步机制系列(5)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/04/23/译-java多线程与同步机制系列(4)/" title="[译]java多线程与同步机制系列(4)－－同步模型" itemprop="url">[译]java多线程与同步机制系列(4)－－同步模型</a>
   </h1>
   <p class="article-author">By
        
@@ -158,7 +254,7 @@
 <div class="comments-count">
 	
 	  	<span></span>
-		<a href="/2015/04/23/译-java多线程与同步机制系列-4/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列-4/" data-count-type="comments">&nbsp;</a>
+		<a href="/2015/04/23/译-java多线程与同步机制系列(4)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列(4)/" data-count-type="comments">&nbsp;</a>
 	
 </div>
 
@@ -392,7 +488,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">4</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">5</span></li></ul>
   </div>
 
 
@@ -402,7 +498,7 @@
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>4</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>5</sup></a></li>
 		  
 		
 		</ul>
