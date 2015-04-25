@@ -77,6 +77,71 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
+      <a href="/2015/04/25/译-java多线程与同步机制系列(6)/" title="[译]java多线程与同步机制系列(6)--竞争与临界区" itemprop="url">[译]java多线程与同步机制系列(6)--竞争与临界区</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-04-25T12:47:52.000Z" itemprop="datePublished"> 发表于 2015-04-25</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不改变这些数据的话不会发生任何问题。</p>
+<p>下面就是一个由于多线程对资源竞争而导可能致程序运行失败的例子：</p>
+<figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Counter</span> </span>&#123;</span><br><span class="line">     <span class="keyword">protected</span> <span class="keyword">long</span> <span class="keyword">count</span> = <span class="number">0</span>;</span><br><span class="line">     <span class="keyword">public</span> <span class="keyword">void</span> add(<span class="keyword">long</span> value)&#123;</span><br><span class="line">         <span class="keyword">this</span>.<span class="keyword">count</span> = <span class="keyword">this</span>.<span class="keyword">count</span> + value;</span><br><span class="line">     &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>想象一下如果有两个线程，线程A和线程B。如果两个线程都执行add方法的话，由于我们不知道操作系统是怎么控制调度这两个线程执行的，加上这个方法在java虚拟机运行时不是原子操作，而是像下面这样分三步执行：</p>
+<figure class="highlight oxygene"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">get this.count <span class="keyword">from</span> memory <span class="keyword">into</span> <span class="keyword">register</span></span><br><span class="line"><span class="keyword">add</span> value <span class="keyword">to</span> <span class="keyword">register</span></span><br><span class="line"><span class="keyword">write</span> <span class="keyword">register</span> <span class="keyword">to</span> memory</span><br></pre></td></tr></table></figure>
+<p>如果线程A和线程B同时执行这个方法的话，那么它们可能像下面这样交替执行：</p>
+<figure class="highlight applescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">this.<span class="command">count</span> = <span class="number">0</span>;</span><br><span class="line"> A:  reads this.<span class="command">count</span> <span class="keyword">into</span> a register (<span class="number">0</span>)</span><br><span class="line"> B:  reads this.<span class="command">count</span> <span class="keyword">into</span> a register (<span class="number">0</span>)</span><br><span class="line"> B:  adds value <span class="number">2</span> <span class="keyword">to</span> register</span><br><span class="line"> B:  writes register value (<span class="number">2</span>) <span class="keyword">back</span> <span class="keyword">to</span> memory. this.<span class="command">count</span> now <span class="keyword">equals</span> <span class="number">2</span></span><br><span class="line"> A:  adds value <span class="number">3</span> <span class="keyword">to</span> register</span><br><span class="line"> A:  writes register value (<span class="number">3</span>) <span class="keyword">back</span> <span class="keyword">to</span> memory. this.<span class="command">count</span> now <span class="keyword">equals</span> <span class="number">3</span></span><br></pre></td></tr></table></figure>
+<p>两个线程分别对count变量加2和加3，两个线程结束后正常的结果应该是5，但是两个线程的执行是相互交替的，两个线程从内存中将count初始值读到各自的寄存器中，然后各自对寄存器中得count值进行加2和加3操作，然后都将值写到内存中，结果可想而知，count的新值将由最后一个写入count新值的线程决定，但可以确定的是count值最后绝对不是5.所以如果不采取适当的同步机制的话，我们不会得到一个确定的count新值。<br><br><br>两个或多个线程同时对共享资源发出操作请求就叫做竞争，而导致竞争的那一段代码段就叫做临界区，在上述例子中，add方法体就是一个临界区，它导致了竞争。竞争可以通过在临界区采取适当的同步机制来避免。</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/04/25/译-java多线程与同步机制系列(6)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/25/译-java多线程与同步机制系列(6)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
       <a href="/2015/04/25/maven-tomcat7+Spring Boot/" title="[原创]maven+tomcat7环境配置+Spring Boot" itemprop="url">[原创]maven+tomcat7环境配置+Spring Boot</a>
   </h1>
   <p class="article-author">By
@@ -588,7 +653,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">6</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">7</span></li></ul>
   </div>
 
 
@@ -598,7 +663,7 @@
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>5</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>6</sup></a></li>
 		  
 		
 		  
