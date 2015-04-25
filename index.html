@@ -77,6 +77,106 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
+      <a href="/2015/04/25/maven-tomcat7+Spring Boot/" title="[原创]maven+tomcat7环境配置+Spring Boot" itemprop="url">[原创]maven+tomcat7环境配置+Spring Boot</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-04-25T07:22:38.000Z" itemprop="datePublished"> 发表于 2015-04-25</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <h4 id="tomcat7配置">tomcat7配置</h4><p>首先打开tomcat安装目录中的conf/tomcat-users.xml，在<users></users>内部添加如下代码</p>
+<figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;role <span class="variable">rolename=</span><span class="string">"manager-gui"</span>/&gt;    </span><br><span class="line">&lt;role <span class="variable">rolename=</span><span class="string">"manager-script"</span>/&gt;    </span><br><span class="line">&lt;user <span class="variable">username=</span><span class="string">"xxxx"</span> <span class="variable">password=</span><span class="string">"xxxxx"</span> <span class="variable">roles=</span><span class="string">"manager-gui, manager-script"</span>/&gt;</span><br></pre></td></tr></table></figure>
+<h4 id="maven配置">maven配置</h4><p>在maven的安装目录中的conf文件夹中有settings.xml，或者在maven仓库中有settings.xml，打开该xml文件，在<servers></servers>内部添加如下代码：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">server</span>&gt;</span></span><br><span class="line"> <span class="tag">&lt;<span class="title">id</span>&gt;</span>tomcat<span class="tag">&lt;/<span class="title">id</span>&gt;</span></span><br><span class="line"> <span class="tag">&lt;<span class="title">username</span>&gt;</span>xxxx<span class="tag">&lt;/<span class="title">username</span>&gt;</span></span><br><span class="line"> <span class="tag">&lt;<span class="title">password</span>&gt;</span>xxxx<span class="tag">&lt;/<span class="title">password</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="title">server</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>注意</p>
+<ol>
+<li>这里的id可以随便取名，但是注意要与pom.xml文件中的id相同，maven根据这个id找到相应的服务器将项目部署上去。</li>
+<li>username为上述tomcat的tomcat-users.xml中新增user的username。</li>
+<li>password为上述tomcat的tomcat-user.xml中新增user的password。</li>
+</ol>
+<h4 id="项目中pom-xml配置">项目中pom.xml配置</h4><p>pom.xml需要增加tomcat-maven-plugin插件，代码如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">plugins</span>&gt;</span>  </span><br><span class="line">           <span class="tag">&lt;<span class="title">plugin</span>&gt;</span>  </span><br><span class="line">               <span class="tag">&lt;<span class="title">groupId</span>&gt;</span>org.apache.tomcat.maven<span class="tag">&lt;/<span class="title">groupId</span>&gt;</span></span><br><span class="line">               <span class="tag">&lt;<span class="title">artifactId</span>&gt;</span>tomcat7-maven-plugin<span class="tag">&lt;/<span class="title">artifactId</span>&gt;</span> </span><br><span class="line">               <span class="tag">&lt;<span class="title">version</span>&gt;</span>2.2<span class="tag">&lt;/<span class="title">version</span>&gt;</span>               </span><br><span class="line">               <span class="tag">&lt;<span class="title">configuration</span>&gt;</span>  </span><br><span class="line">                		 <span class="tag">&lt;<span class="title">server</span>&gt;</span>tomcat<span class="tag">&lt;/<span class="title">server</span>&gt;</span></span><br><span class="line">                        <span class="tag">&lt;<span class="title">url</span>&gt;</span>http://localhost:8080/manager/text<span class="tag">&lt;/<span class="title">url</span>&gt;</span>              </span><br><span class="line">               <span class="tag">&lt;/<span class="title">configuration</span>&gt;</span>  </span><br><span class="line">           <span class="tag">&lt;/<span class="title">plugin</span>&gt;</span>  </span><br><span class="line"><span class="tag">&lt;/<span class="title">plugins</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>注意：</p>
+<ol>
+<li><code>&lt;server&gt;tomcat&lt;/server&gt;</code>中tomcat就是在上述的maven配置中<code>&lt;id&gt;tomcat&lt;/id&gt;</code></li>
+<li><code>&lt;url&gt;........../text&lt;/url&gt;</code>注意tomcat7必须以text结尾</li>
+<li>maven命令要以tomcat7开头，例如tomcat7:deploy,tomcat7:redeploy</li>
+<li>注意该插件的groupid和artifactid：</li>
+</ol>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">groupId</span>&gt;</span>org.apache.tomcat.maven<span class="tag">&lt;/<span class="title">groupId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="title">artifactId</span>&gt;</span>tomcat7-maven-plugin<span class="tag">&lt;/<span class="title">artifactId</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>将其与老版本的tomcat-maven插件区别开来，即：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">groupId</span>&gt;</span>org.codehaus.mojo<span class="tag">&lt;/<span class="title">groupId</span>&gt;</span>				</span><br><span class="line"><span class="tag">&lt;<span class="title">artifactId</span>&gt;</span>tomcat-maven-plugin<span class="tag">&lt;/<span class="title">artifactId</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>新版本的tomcat-maven-plugin支持tomcat6和tomcat7,两者区别如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">groupId</span>&gt;</span>org.apache.tomcat.maven<span class="tag">&lt;/<span class="title">groupId</span>&gt;</span>  </span><br><span class="line"><span class="tag">&lt;<span class="title">artifactId</span>&gt;</span>tomcat6-maven-plugin<span class="tag">&lt;/<span class="title">artifactId</span>&gt;</span>  </span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="title">groupId</span>&gt;</span>org.apache.tomcat.maven<span class="tag">&lt;/<span class="title">groupId</span>&gt;</span>  </span><br><span class="line"><span class="tag">&lt;<span class="title">artifactId</span>&gt;</span>tomcat7-maven-plugin<span class="tag">&lt;/<span class="title">artifactId</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<h4 id="maven自带tomcat">maven自带tomcat</h4><p>当然，如果嫌上面的配置很麻烦或者电脑上没有安装tomcat的话，就可以使用maven自带的tomcat插件，无需任何配置，只需要使用mvn tomcat:run命令就可以了，maven的tomcat插件将自动创建一个tomcat服务器，并将项目war打包部署上去，如果一切成功的话，只需要打开浏览器，输入地址：localhost:8080/xxx就可以访问自己的项目了。</p>
+<h4 id="Spring_Boot">Spring Boot</h4><p>最后还想说说Spring Boot，这是我最近接触到的一个新框架，感觉这个框架用处很大，所以在这里说说。Spring boot是Spring官方的一个子项目，按照官方的说法，Spring Boot能够让你快速开发部署用于生产环境下的Spring项目，它遵循约定大于配置的原则。关于约定大于配置的原则，我在这里多说几句，到底什么是约定大于配置，简单的来说就是这个框架有一个规范，比如说配置文件放在哪个文件夹下，取什么名字，配置文件的格式规范是什么样子，这叫做约定。当然这个约定是可以不遵守的，你完全可以自定义，这叫做配置。约定大于配置的意思就是希望开发者按照它的规范来使用这个框架，而不是自定义配置，这个原则在很多框架上都是被强调的。这么做有两点好处：</p>
+<ol>
+<li>加快框架初始化和执行速度；框架在初始化时需要根据配置文件的内容对需要用到的类进行初始化，那么它将首先在规范中规定的配置文件位置去寻找配置文件，如果按照规范来，那么框架就一下子找到了配置文件，如果按照自定义配置来的话，框架先得遍历规范中的位置然后再到配置的文件路径去寻找，这无疑拖慢了速度。</li>
+<li>减少开发者的错误几率；一个框架往往有很多东西需要配置，如果开发者自己定义这些配置方式难免会犯一些错误，有些错误可能会影响整个框架的运行。如果根据规范来做的话，犯错可能性会降低许多。</li>
+</ol>
+<p>那么Spring Boot跟这篇文章有什么关系呢？答案是Spring Boot提供了内置的tomcat服务器程序，不仅如此，还包括了像Jetty，Undertow这些很流行的服务器，这使得我们可以无需手动部署war到服务器上。还有一点也是Spring Boot带给我们的便利，那就是我们可以不用XML配置，直接使用java代码或注解写出一个纯java的应用。当然，要想使用Spring Boot的话需要一些配置，这里以maven为例：</p>
+<p>首先，在maven的pom.xml文件中增加对父项目的引用，这个父项目由Spring Boot提供。代码如下所示：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="title">parent</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="title">groupId</span>&gt;</span>org.springframework.boot<span class="tag">&lt;/<span class="title">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="title">artifactId</span>&gt;</span>spring-boot-starter-parent<span class="tag">&lt;/<span class="title">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="title">version</span>&gt;</span>1.2.3.RELEASE<span class="tag">&lt;/<span class="title">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="title">parent</span>&gt;</span></span><br></pre></td></tr></table></figure>
+<p>有人可能会问不是说好的纯java应用吗，怎么又多了个pom.xml,这里要注意一下，pom.xml是maven的配置文件，maven是一个构建工具，它可以构建一个应用，上面所说得纯java应用指的就是这个构建的应用。</p>
+<p>然后，在项目中创建一个启动类，代码如下：</p>
+<pre><code><span class="annotation">@SpringBootApplication</span>
+<span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Example</span> {</span>
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="typename">void</span> main(String[] args) <span class="keyword">throws</span> Exception {
+        SpringApplication.run(Example.<span class="keyword">class</span>, args);
+    }
+</code></pre><p>这串代码需要注意两点，第一点就是@SpringBootApplication这个注解，之所以可以构建一个纯java应用而不需要XML配置文件，就是因为这个注解，具体原理不是本文重点，第二个要注意的地方就是倒数第二行的代码，这就是整个应用的入口，不管是java本地应用还是web应用，都是这句代码。这样web应用的开发就变得和开发java本地应用一样了。最后我们将执行mvn spring-boot:run命令，对于web应用，这条命令会编译，打包wen程序，然后将其部署到它内置的tomcat服务器上运行，具体过程如下所示：</p>
+<p><pre><code><br>$ mvn spring-boot:run<br>  .   <strong><em>_          </em>            </strong> <em> </em><br> /\ / <strong><em>‘</em> </strong> <em> </em>(<em>)</em> <strong>  </strong> <em> \ \ \ \<br>( ( )__</em> | ‘<em> | ‘</em>| | ‘<em> \/ </em>` | \ \ \ \<br> \/  <strong><em>)| |</em>)| | | | | || (<em>| |  ) ) ) )<br>  ‘  |_</em></strong>| .<strong>|<em>| |</em>|<em>| |</em>\</strong>, | / / / /<br> =========|<em>|==============|__</em>/=/<em>/</em>/_/<br> :: Spring Boot ::  (v1.2.3.RELEASE)<br>……. . . .<br>……. . . . (log output here)<br>……. . . .<br>…….. Started Example in 2.222 seconds (JVM running for 6.514)<br></code></pre><br>然后你就可以打开浏览器输入localhost:8080访问你写的程序了。是不是很方便？？？</p>
+<p>附上Spring Boot项目主页(<a href="http://projects.spring.io/spring-boot/" target="_blank" rel="external">http://projects.spring.io/spring-boot/</a>)</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/maven/">maven</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/04/25/maven-tomcat7+Spring Boot/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/25/maven-tomcat7+Spring Boot/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
       <a href="/2015/04/24/译-java多线程与同步机制系列(5)/" title="[译]java多线程与同步机制系列(5)－－创建和开启线程" itemprop="url">[译]java多线程与同步机制系列(5)－－创建和开启线程</a>
   </h1>
   <p class="article-author">By
@@ -488,7 +588,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">5</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">6</span></li></ul>
   </div>
 
 
@@ -499,6 +599,10 @@
 		
 		  
 			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>5</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
 		  
 		
 		</ul>
