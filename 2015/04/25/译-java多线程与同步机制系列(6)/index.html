@@ -11,21 +11,18 @@
     
 
     
-    <meta name="description" content="多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不改变这些数据的话不会发生任何问题。
-下面就是一个由于多线程对资源竞争而导可能致程序运行失败的例子：
-123456public class Counter &amp;#123;     protec">
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/race-conditions-and-critical-sections.html)
+多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不">
 <meta property="og:type" content="article">
 <meta property="og:title" content="[译]java多线程与同步机制系列(6)--竞争与临界区">
 <meta property="og:url" content="http://yoursite.com/2015/04/25/译-java多线程与同步机制系列(6)/index.html">
 <meta property="og:site_name" content="朱家骅的Blog">
-<meta property="og:description" content="多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不改变这些数据的话不会发生任何问题。
-下面就是一个由于多线程对资源竞争而导可能致程序运行失败的例子：
-123456public class Counter &amp;#123;     protec">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/race-conditions-and-critical-sections.html)
+多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="[译]java多线程与同步机制系列(6)--竞争与临界区">
-<meta name="twitter:description" content="多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不改变这些数据的话不会发生任何问题。
-下面就是一个由于多线程对资源竞争而导可能致程序运行失败的例子：
-123456public class Counter &amp;#123;     protec">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/race-conditions-and-critical-sections.html)
+多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不">
 
     
     
@@ -101,7 +98,8 @@
 		
 		</div>
 		
-		<p>多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不改变这些数据的话不会发生任何问题。</p>
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/race-conditions-and-critical-sections.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/race-conditions-and-critical-sections.html</a>)</p>
+<p>多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不改变这些数据的话不会发生任何问题。</p>
 <p>下面就是一个由于多线程对资源竞争而导可能致程序运行失败的例子：</p>
 <figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Counter</span> </span>&#123;</span><br><span class="line">     <span class="keyword">protected</span> <span class="keyword">long</span> <span class="keyword">count</span> = <span class="number">0</span>;</span><br><span class="line">     <span class="keyword">public</span> <span class="keyword">void</span> add(<span class="keyword">long</span> value)&#123;</span><br><span class="line">         <span class="keyword">this</span>.<span class="keyword">count</span> = <span class="keyword">this</span>.<span class="keyword">count</span> + value;</span><br><span class="line">     &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
 <p>想象一下如果有两个线程，线程A和线程B。如果两个线程都执行add方法的话，由于我们不知道操作系统是怎么控制调度这两个线程执行的，加上这个方法在java虚拟机运行时不是原子操作，而是像下面这样分三步执行：</p>
@@ -139,6 +137,14 @@
 	
 <nav class="article-nav clearfix">
  
+ <div class="prev" >
+ <a href="/2015/04/26/译-java多线程与同步机制系列(7)/" title="[译]java多线程与同步机制系列(7)--线程安全与共享资源">
+  <strong>上一篇：</strong><br/>
+  <span>
+  [译]java多线程与同步机制系列(7)--线程安全与共享资源</span>
+</a>
+</div>
+
 
 <div class="next">
 <a href="/2015/04/25/maven-tomcat7+Spring Boot/"  title="[原创]maven+tomcat7环境配置+Spring Boot">
@@ -173,7 +179,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">7</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">8</span></li></ul>
   </div>
 
 
@@ -183,7 +189,7 @@
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>6</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>7</sup></a></li>
 		  
 		
 		  

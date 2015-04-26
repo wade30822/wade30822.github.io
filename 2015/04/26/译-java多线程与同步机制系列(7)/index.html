@@ -1,0 +1,460 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>[译]java多线程与同步机制系列(7)--线程安全与共享资源 | 朱家骅的Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="朱家骅">
+    
+
+    
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/thread-safety.html)
+多个线程同时执行一段代码不会出现同步问题就叫做线程安全。如果一段代码是线程安全的话，那么它就不会存在竞争。竞争只会发生在多个线程希望修改贡献数据的时候。因此我们需要知道哪些资源是线程共享资源。
+本地变量本地变量存放在线程的私有栈中，这就意味着它不会被多个线程共">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]java多线程与同步机制系列(7)--线程安全与共享资源">
+<meta property="og:url" content="http://yoursite.com/2015/04/26/译-java多线程与同步机制系列(7)/index.html">
+<meta property="og:site_name" content="朱家骅的Blog">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/thread-safety.html)
+多个线程同时执行一段代码不会出现同步问题就叫做线程安全。如果一段代码是线程安全的话，那么它就不会存在竞争。竞争只会发生在多个线程希望修改贡献数据的时候。因此我们需要知道哪些资源是线程共享资源。
+本地变量本地变量存放在线程的私有栈中，这就意味着它不会被多个线程共">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(7)--线程安全与共享资源">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/thread-safety.html)
+多个线程同时执行一段代码不会出现同步问题就叫做线程安全。如果一段代码是线程安全的话，那么它就不会存在竞争。竞争只会发生在多个线程希望修改贡献数据的时候。因此我们需要知道哪些资源是线程共享资源。
+本地变量本地变量存放在线程的私有栈中，这就意味着它不会被多个线程共">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="朱家骅的Blog">朱家骅的Blog</a></h1>
+				<h2 class="blog-motto">把流行的技术挂在嘴边，不如把过时的技术记在心里</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/categories">分类</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:yoursite.com">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/04/26/译-java多线程与同步机制系列(7)/" title="[译]java多线程与同步机制系列(7)--线程安全与共享资源" itemprop="url">[译]java多线程与同步机制系列(7)--线程安全与共享资源</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-04-26T03:07:21.000Z" itemprop="datePublished"> 发表于 2015-04-26</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#本地变量"><span class="toc-number">1.</span> <span class="toc-text">本地变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#本地引用变量"><span class="toc-number">2.</span> <span class="toc-text">本地引用变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对象成员变量"><span class="toc-number">3.</span> <span class="toc-text">对象成员变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#线程控制逃逸原则"><span class="toc-number">4.</span> <span class="toc-text">线程控制逃逸原则</span></a></li></ol>
+		
+		</div>
+		
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/thread-safety.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/thread-safety.html</a>)</p>
+<p>多个线程同时执行一段代码不会出现同步问题就叫做线程安全。如果一段代码是线程安全的话，那么它就不会存在竞争。竞争只会发生在多个线程希望修改贡献数据的时候。因此我们需要知道哪些资源是线程共享资源。<br><br></p>
+<h3 id="本地变量">本地变量</h3><p>本地变量存放在线程的私有栈中，这就意味着它不会被多个线程共享，同时也表明这些本地原生变量(基本数据类型)是线程安全的。下面就是一个线程安全的本地原生变量的例子：</p>
+<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">someMethod</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">long</span> threadSafeInt = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  threadSafeInt++;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h3 id="本地引用变量">本地引用变量</h3><p>本地引用变量就有点特殊了。这个引用本身是线程安全的，这没有任何问题，但是它所引用的那个对象是不安全的，因为那个对象不是存在于线程的私有栈(私有栈中只存有对这个对象的引用)中，我们都知道，对象都存放在公共的堆中。当然有特殊情况，那就是如果一个对象属于一个方法的本地变量，而它的引用也只存在于这个方法中的话，那么这个方法属于线程安全的。当然你也可以把这个变量以参数的形式传给其他函数，但是前提是这个函数不会将该变量暴漏在其他线程面前：</p>
+<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">someMethod</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  LocalObject localObject = <span class="keyword">new</span> LocalObject();</span><br><span class="line"></span><br><span class="line">  localObject.callMethod();</span><br><span class="line">  method2(localObject);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">method2</span><span class="params">(LocalObject localObject)</span></span>&#123;</span><br><span class="line">  localObject.setValue(<span class="string">"value"</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在这个例子中，localObject对象不是其他方法的返回值，也不会传递给能够访问someMethod方法的外部对象使用。每一个执行someMethod方法的线程都会创建自己的localObject对象，然后把该对象的引用存在在本线程的线程栈中，所以localObject的使用是线程安全的。someMethod方法也是线程安全的。即使localObject以参数的方式传给了同一个类对象或者其他类对象的函数，localObject的使用也是安全的，除非接收这个localObject的方法把这个引用暴漏给了其他线程。<br><br></p>
+<h3 id="对象成员变量">对象成员变量</h3><p>对象成员变量与对象一起存放在堆中，因此，如果两个线程对同一个对象的同一个成员变量数据进行修改时，问题就发生了，因此这不是线程安全的。下面就是一个例子：</p>
+<figure class="highlight processing"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> class NotThreadSafe&#123;</span><br><span class="line">    StringBuilder builder = <span class="keyword">new</span> StringBuilder();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="built_in">add</span>(<span class="keyword">String</span> <span class="built_in">text</span>)&#123;</span><br><span class="line">        <span class="keyword">this</span>.builder.<span class="built_in">append</span>(<span class="built_in">text</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果两个线程对同一个NotThreadSafe对象调用add方法的话就会导致竞争，比如像下面这样：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">NotThreadSafe sharedInstance = <span class="keyword">new</span> NotThreadSafe();</span><br><span class="line"></span><br><span class="line"><span class="keyword">new</span> Thread(<span class="keyword">new</span> MyRunnable(sharedInstance)).start();</span><br><span class="line"><span class="keyword">new</span> Thread(<span class="keyword">new</span> MyRunnable(sharedInstance)).start();</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyRunnable</span> <span class="keyword">implements</span> <span class="title">Runnable</span></span>&#123;</span><br><span class="line">  NotThreadSafe instance = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">MyRunnable</span><span class="params">(NotThreadSafe instance)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.instance = instance;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.instance.add(<span class="string">"some text"</span>);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面的代码中，两个线程共享同一个NotThreadSafe对象，所以当它们同时调用add方法时就会发生竞争。但是，如果两个线程同时对两个不同的NotThreadSafe对象调用add方法时竞争就不会发生，我们只需要对上面的代码做轻微的修改：</p>
+<figure class="highlight ocaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">new</span> <span class="type">Thread</span>(<span class="keyword">new</span> <span class="type">MyRunnable</span>(<span class="keyword">new</span> <span class="type">NotThreadSafe</span><span class="literal">()</span>)).start<span class="literal">()</span>;</span><br><span class="line"><span class="keyword">new</span> <span class="type">Thread</span>(<span class="keyword">new</span> <span class="type">MyRunnable</span>(<span class="keyword">new</span> <span class="type">NotThreadSafe</span><span class="literal">()</span>)).start<span class="literal">()</span>;</span><br></pre></td></tr></table></figure>
+<p>这里注意到两个线程都拥有一个不同的NotThreadSafe对象引用，所以它们同时调用add方法不会相互影响。add方法将是线程安全的。所以，从这个例子我们可以得出一个结论：即使代码是非线程安全的，但是我们仍然有办法让它不会发生竞争。<br><br></p>
+<h3 id="线程控制逃逸原则">线程控制逃逸原则</h3><p>判断你的代码是否是线程安全的方法是判断它是否遵守线程控制逃逸原则，原则如下：</p>
+<pre><code>If <span class="operator">a</span> resource is created, used <span class="operator">and</span> disposed <span class="operator">within</span>
+<span class="operator">the</span> control <span class="operator">of</span> <span class="operator">the</span> same thread,
+<span class="operator">and</span> never escapes <span class="operator">the</span> control <span class="operator">of</span> this thread,
+<span class="operator">the</span> use <span class="operator">of</span> that resource is thread safe.
+</code></pre><p>这里的资源包括对象，数据，数据库连接等等，在java中你可能永远不会显式的“抛弃“资源，这里所说的“抛弃”是指将对象的引用置空(null)；</p>
+<p>当然，即使这个对象引用的使用是线程安全的，但是这个引用所指向的资源比如说文件，数据库连接等等确有可能不是线程安全的。举个例子，如果线程一和线程二分别创建了一个数据库连接的话，那么每个线程对该连接的使用是线程安全的，但是连接所指向的数据的使用却不是线程安全的。比如两个线程执行以下操作：</p>
+<pre><code><span class="operator"><span class="keyword">check</span> <span class="keyword">if</span> record X <span class="keyword">exists</span>
+<span class="keyword">if</span> <span class="keyword">not</span>, <span class="keyword">insert</span> record X</span>
+</code></pre><p>如果两个线程同时执行以上操作的话，那么X的状态对于两个线程是相同的，那么就有可能两个线程都会插入一个X，总共就是两个X记录了：</p>
+<pre><code>Thread <span class="number">1</span> checks <span class="keyword">if</span> <span class="keyword">record</span> X exists. <span class="keyword">Result</span> = no
+Thread <span class="number">2</span> checks <span class="keyword">if</span> <span class="keyword">record</span> X exists. <span class="keyword">Result</span> = no
+Thread <span class="number">1</span> inserts <span class="keyword">record</span> X
+Thread <span class="number">2</span> inserts <span class="keyword">record</span> X
+</code></pre><p>这种情况也有可能发生在操作文件或者其他共享资源的时候。所以区分线程中的对象是一个资源还是仅仅是对资源的引用非常重要。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://yoursite.com/2015/04/26/译-java多线程与同步机制系列(7)/" data-title="[译]java多线程与同步机制系列(7)--线程安全与共享资源 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/04/25/译-java多线程与同步机制系列(6)/"  title="[译]java多线程与同步机制系列(6)--竞争与临界区">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制系列(6)--竞争与临界区
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/04/26/译-java多线程与同步机制系列(7)/" data-title="[译]java多线程与同步机制系列(7)--线程安全与共享资源" data-url="http://yoursite.com/2015/04/26/译-java多线程与同步机制系列(7)/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#本地变量"><span class="toc-number">1.</span> <span class="toc-text">本地变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#本地引用变量"><span class="toc-number">2.</span> <span class="toc-text">本地引用变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#对象成员变量"><span class="toc-number">3.</span> <span class="toc-text">对象成员变量</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#线程控制逃逸原则"><span class="toc-number">4.</span> <span class="toc-text">线程控制逃逸原则</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">归档</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">8</span></li></ul>
+  </div>
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>7</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://www.csdn.net" target="_blank" title="CSDN">CSDN</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1685825420&verifier=f33b37d3&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> 大家好，我是朱家骅。 <br/>
+			欢迎来到我的技术博客！！！</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1685825420" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<a href="mailto:317560406@qq.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="朱家骅">朱家骅</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"flash03"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
