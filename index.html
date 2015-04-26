@@ -91,7 +91,7 @@
     <div class="article-content">
         
         <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/thread-safety.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/thread-safety.html</a>)</p>
-<p>多个线程同时执行一段代码不会出现同步问题就叫做线程安全。如果一段代码是线程安全的话，那么它就不会存在竞争。竞争只会发生在多个线程希望修改贡献数据的时候。因此我们需要知道哪些资源是线程共享资源。<br><br></p>
+<p>多个线程同时执行一段代码不会出现同步问题就叫做线程安全。如果一段代码是线程安全的话，那么它就不会存在竞争。竞争只会发生在多个线程希望修改共享数据的时候。因此我们需要知道哪些资源是线程共享资源。<br><br></p>
 <h3 id="本地变量">本地变量</h3><p>本地变量存放在线程的私有栈中，这就意味着它不会被多个线程共享，同时也表明这些本地原生变量(基本数据类型)是线程安全的。下面就是一个线程安全的本地原生变量的例子：</p>
 <figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">someMethod</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">long</span> threadSafeInt = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  threadSafeInt++;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p><br></p>
