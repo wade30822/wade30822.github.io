@@ -144,7 +144,7 @@ java内存模型详细阐述了java虚拟机在计算机内存(RAM)中的工作�
 <p><img src="http://tutorials.jenkov.com/images/java-concurrency/java-memory-model-4.png" alt="现代计算机硬件架构"></p>
 <p>一台现代计算机一般有两个或多个CPU，每个CPU上可能有多个核，这就意味着可以有超过一个线程同时运行，每个CPU都可以运行一个线程。如果你的java程序是多线程的，那么在程序内部可以有多个线程同时运行。</p>
 <p>每个CPU都有许多寄存器，CPU操作寄存器的数据的速度比操作内存数据的速度快得多，因为CPU访问寄存器的速度比访问内存的速度快得多。</p>
-<p>每个CPU也可能拥有一个CPU缓存层。，事实上，现代CPU都会有一个一定大小的缓存层。CPU访问缓存层的速度比访问内存的速度快，但是比访问寄存器的速度慢。有些CPU甚至有多个缓冲层(Lay1和Lay2)，当然，在这里我们不必了解java内存模型与这些缓冲层是怎么打交道的，我们只需要知道CPU也有自己的缓冲层存储数据。</p>
+<p>每个CPU也可能拥有一个CPU缓存层。事实上，现代CPU都会有一个一定大小的缓存层。CPU访问缓存层的速度比访问内存的速度快，但是比访问寄存器的速度慢。有些CPU甚至有多个缓冲层(Lay1和Lay2)，当然，在这里我们不必了解java内存模型与这些缓冲层是怎么打交道的，我们只需要知道CPU也有自己的缓冲层存储数据。</p>
 <p>计算机也有主存(RAM)，这是我们最熟悉的。CPU可以访问主存，主存的的容量比CPU的缓存大多了。</p>
 <p>当CPU需要访问主存时，它一般将一部分主存的数据直接保存到它的缓存中，甚至会将一部分数据直接存到CPU的寄存器中，然后对这些数据执行操作。当CPU需要将结果回写到主存时，它首先把寄存器中对应的值回写到CPU缓存中，然后从缓存中将值回写到主存中。</p>
 <p>CPU一般会在需要缓存其他数据时从缓存中清除一部分数据并刷新内存中对应的数据。CPU缓存可以一次对部分缓存区域进行操作而没必要每次对整个缓存进行操作。一般来说，CPU从内存读取数据或从缓存中清除数据的最小单位叫做“缓存条“(cache lines)，CPU可以一次将一个或多个缓存条的数据读进缓存，也可以一次将一个或多个缓存条清除出缓存。<br><br></p>
@@ -195,6 +195,14 @@ java内存模型详细阐述了java虚拟机在计算机内存(RAM)中的工作�
 	
 <nav class="article-nav clearfix">
  
+ <div class="prev" >
+ <a href="/2015/04/27/译-java多线程与同步机制系列(10)/" title="[译]java多线程与同步机制系列(10)-- ">
+  <strong>上一篇：</strong><br/>
+  <span>
+  [译]java多线程与同步机制系列(10)-- </span>
+</a>
+</div>
+
 
 <div class="next">
 <a href="/2015/04/26/译-java多线程与同步机制系列(8)/"  title="[译]java多线程与同步机制系列(8)--线程安全与不变性">
@@ -229,7 +237,7 @@ java内存模型详细阐述了java虚拟机在计算机内存(RAM)中的工作�
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">10</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">11</span></li></ul>
   </div>
 
 
@@ -239,7 +247,7 @@ java内存模型详细阐述了java虚拟机在计算机内存(RAM)中的工作�
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>9</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>10</sup></a></li>
 		  
 		
 		  

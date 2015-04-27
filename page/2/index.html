@@ -1,0 +1,355 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>朱家骅的Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="朱家骅">
+    
+
+    
+    <meta name="description">
+<meta property="og:type" content="website">
+<meta property="og:title" content="朱家骅的Blog">
+<meta property="og:url" content="http://yoursite.com/page/2/index.html">
+<meta property="og:site_name" content="朱家骅的Blog">
+<meta property="og:description">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="朱家骅的Blog">
+<meta name="twitter:description">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="朱家骅的Blog">朱家骅的Blog</a></h1>
+				<h2 class="blog-motto">把流行的技术挂在嘴边，不如把过时的技术记在心里</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/categories">分类</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:yoursite.com">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main">
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/04/23/译-java多线程与同步机制系列(1)/" title="[译]java多线程与同步机制系列(1)－－综述" itemprop="url">[译]java多线程与同步机制系列(1)－－综述</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-04-23T01:46:40.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接 [<a href="http://tutorials.jenkov.com/java-concurrency/index.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/index.html</a>]<br><br><br>早在单核时代，计算机只能同时执行一个进程。随后，多任务还是兴起，这意味着计算机可以“同时”执行多个进程，当然，这里的同时不是真正的同时，只是单核CPU被进程轮流使用，操作系统控制进程轮流获取CPU控制权，每个进程执行一段时间片后让出CPU给另一进程使用。<br><br><br>多任务的兴起也给开发者带来了挑战，程序将不再被认为可以一直拥有包括CPU，内存以及其他计算资源了，一个行为良好的进程应该在不需要某些资源时及时释放，以便让其他进程使用。<br><br><br>多线程技术的出现意味着在同一个进程中可以有多个线程并发执行任务，线程成为了计算机运行的最小调度单位，一个线程的执行对应一个CPU的执行，当你在程序中使用了多线程时，就好像在同一个程序中有多个CPU在执行任务。<br><br><br>多线程对某些程序的性能及效率提升有很大的帮助，但是，多线程是一门比多任务更具有挑战性的技术。同一个进程中的多个线程共享同一块内存，由此会出现在单线程程序中不会出现的同时读写内存问题。在单线程程序中，这些错误永远都不会出现，因为两个线程永远不会同时执行。由于现代计算机一般都配备了双核甚至多核CPU，这就意味着多个线程可以同时在多个CPU中执行，这从一定程度上缓解了多线程所带来的困扰。<br><br><br><img src="http://tutorials.jenkov.com/images/java-concurrency/java-concurrency-tutorial-introduction-1.png" alt="多核模型"><br><br><br>当一个线程在读取某个内存单元的值时，另外一个线程同时在向该内存单元写入新值，那么第一个线程将读取的是原值还是另外一个线程写入的新值，或者两者都不是呢？又或者两个线程同时对一个内存单元写入新值，那么最后该内存单元存储的到底是哪个线程写入的值抑或是一个奇怪的值呢？<br><br><br>如果没有采取一定的措施的话，以上的情况都有可能发生，更要命的是这些情况是不可预测的，每次运行结果都会不一样。因此对于开发人员来说，采取合理的措施来控制多线程对其共享的内存资源，文件，数据库的操作是必不可少的，而这也将是本次java同步及多线程系列教程的重点之一。<br><br></p>
+<h3 id="java多线程及同步">java多线程及同步</h3><p>java是率先具备多线程能力的少数几门编程语言之一，开发者可以利用java快速开发多线程程序，因此，java开发者也会遇到上面提到的一系列问题。这也就是我为什么写这篇java教程的原因，不仅仅是自我的总结，同时也将使得像我一样的java开发者从中受益。<br><br><br>这篇教程原本是准备只讲java多线程的，但是多线程中经常出现的问题与分布式系统中的多任务出现的问题非常相似，因此，我干脆把分布式系统中的多任务也加进了教程讲解，所以主旨也从多线程变成了同步。</p>
+<h3 id="java同步的发展趋势">java同步的发展趋势</h3><p>自从第一本讲解java同步机制的书面世以来，世界上出现了许多同步架构和设计，甚至java5也发布了同步组件。<br><br><br>现如今，像Vert.x,Play/AKKA,Qbit这样的异步独享的平台和API开始兴起，这些平台使用了与Java／JEE不同的线程同步模型，共享内存模型以及锁模型。同时，非阻塞的同步算法以及非阻塞的工具，比如LMax Disruptor等也可以被开发者所用。java7中Fork and Join框架也新增了一种函数式串行编程模式，java8中也出现了stream API。<br><br><br>正是因为在java同步技术有如此多的发展促使我开始不得不更新我之前的java同步系列教程。因此，这个教程的编写又被提上了日程，我将利用空闲时间尽快更新并发布，敬请期待！！！<br><br></p>
+<h3 id="感想">感想</h3><p>这是我翻译的第一篇技术博客，中间曾想过放弃，因为有些词汇和语句太难翻译了，看一句翻译一句，感觉每句话都能翻译出来，但是再把整个一段通读一遍，就感觉太生搬硬套了，句与句之间没有连贯性，所以花了很长时间修改，最后感觉稍微好了点，但还是离我的目标相差很远。这只是个开头，相信多翻译几篇，可能自己的翻译水平会提升一点。这次翻译也让自己发现了自己在语言组织方面的不足，以后要多加强训练。至于外文的翻译，争取做到每天一篇吧，加油！</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/04/23/译-java多线程与同步机制系列(1)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列(1)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+
+  <nav id="page-nav" class="clearfix">
+    <a class="extend prev" rel="prev" href="/"><span></span>Prev</a><a class="page-number" href="/">1</a><span class="page-number current">2</span>
+  </nav>
+
+</div>
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">归档</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">11</span></li></ul>
+  </div>
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>10</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://www.csdn.net" target="_blank" title="CSDN">CSDN</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1685825420&verifier=f33b37d3&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> 大家好，我是朱家骅。 <br/>
+			欢迎来到我的技术博客！！！</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1685825420" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<a href="mailto:317560406@qq.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="朱家骅">朱家骅</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"flash03"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+ </html>
