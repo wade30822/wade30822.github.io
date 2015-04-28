@@ -4,22 +4,28 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>[译]java多线程与同步机制系列(10)--  | 朱家骅的Blog</title>
+    <title>[译]java多线程与同步机制系列(10)-- java同步块 | 朱家骅的Blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="朱家骅">
     
 
     
-    <meta name="description">
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/synchronized.html)
+将一个java方法或代码块加上synchronized关键字就构成了一个同步块。java同步块可以解决竞争问题。
+java synchronized关键字java中的同步块都有一个synchronized关键字标记。同步块使得只有一个线程可以执行同步方法或者同步">
 <meta property="og:type" content="article">
-<meta property="og:title" content="[译]java多线程与同步机制系列(10)-- ">
+<meta property="og:title" content="[译]java多线程与同步机制系列(10)-- java同步块">
 <meta property="og:url" content="http://yoursite.com/2015/04/27/译-java多线程与同步机制系列(10)/index.html">
 <meta property="og:site_name" content="朱家骅的Blog">
-<meta property="og:description">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/synchronized.html)
+将一个java方法或代码块加上synchronized关键字就构成了一个同步块。java同步块可以解决竞争问题。
+java synchronized关键字java中的同步块都有一个synchronized关键字标记。同步块使得只有一个线程可以执行同步方法或者同步">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="[译]java多线程与同步机制系列(10)-- ">
-<meta name="twitter:description">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(10)-- java同步块">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/synchronized.html)
+将一个java方法或代码块加上synchronized关键字就构成了一个同步块。java同步块可以解决竞争问题。
+java synchronized关键字java中的同步块都有一个synchronized关键字标记。同步块使得只有一个线程可以执行同步方法或者同步">
 
     
     
@@ -75,7 +81,7 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/04/27/译-java多线程与同步机制系列(10)/" title="[译]java多线程与同步机制系列(10)-- " itemprop="url">[译]java多线程与同步机制系列(10)-- </a>
+      <a href="/2015/04/27/译-java多线程与同步机制系列(10)/" title="[译]java多线程与同步机制系列(10)-- java同步块" itemprop="url">[译]java多线程与同步机制系列(10)-- java同步块</a>
   </h1>
   <p class="article-author">By
        
@@ -91,11 +97,53 @@
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
 		
-			
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#java_synchronized关键字"><span class="toc-number">1.</span> <span class="toc-text">java synchronized关键字</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#同步实例方法"><span class="toc-number">2.</span> <span class="toc-text">同步实例方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#同步静态方法"><span class="toc-number">3.</span> <span class="toc-text">同步静态方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#实例方法中的同步块"><span class="toc-number">4.</span> <span class="toc-text">实例方法中的同步块</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#静态方法中的同步块"><span class="toc-number">5.</span> <span class="toc-text">静态方法中的同步块</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#java_synchronized实例"><span class="toc-number">6.</span> <span class="toc-text">java synchronized实例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#java同步工具"><span class="toc-number">7.</span> <span class="toc-text">java同步工具</span></a></li></ol>
 		
 		</div>
 		
-		  
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/synchronized.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/synchronized.html</a>)</p>
+<p>将一个java方法或代码块加上synchronized关键字就构成了一个同步块。java同步块可以解决竞争问题。</p>
+<h3 id="java_synchronized关键字">java synchronized关键字</h3><p>java中的同步块都有一个synchronized关键字标记。同步块使得只有一个线程可以执行同步方法或者同步代码块，其他试图执行同步方法或代码块的线程将被阻塞直到当前正在执行这个方法或代码块的线程先执行完毕。</p>
+<p>以下四种代码块可以被synchronized关键字修饰：</p>
+<ol>
+<li>实例方法</li>
+<li>静态方法</li>
+<li>实例方法中的部分代码块</li>
+<li>静态方法中的部分代码块</li>
+</ol>
+<p>你可以根据具体情况选择上述任何一种同步块方式。<br><br></p>
+<h3 id="同步实例方法">同步实例方法</h3><p>下面是一个同步实例方法：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> synchronized <span class="keyword">void</span> <span class="title">add</span><span class="params">(<span class="keyword">int</span> <span class="keyword">value</span>)</span></span>&#123;</span><br><span class="line">      <span class="keyword">this</span>.count += <span class="keyword">value</span>;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>在add方法的声明中加上了sunchronized关键字，这就表明这是一个同步方法。</p>
+<p>一个java实例同步方法是同步于这个方法所属的对象上的。因此每个对象都有自己的同步方法，只有一个线程可以执行对象中的实例同步方法。如果有多个实例存在的话，那么每个实例都可以有一个线程执行该实例中的同步方法，一个实例一个线程。<br><br></p>
+<h3 id="同步静态方法">同步静态方法</h3><p>静态同步方法和实例同步方法一样也是由synchronized关键字修饰。下面是一个java静态同步方法的例子：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> synchronized <span class="keyword">void</span> <span class="title">add</span><span class="params">(<span class="keyword">int</span> <span class="keyword">value</span>)</span></span>&#123;</span><br><span class="line">     count += <span class="keyword">value</span>;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>synchronized关键字表明这是一个同步方法。</p>
+<p>静态同步方法是同步于该方法所属的类对象上。由于java虚拟机中每个类只有一个类对象，那么同一个类中只能有一个线程执行静态同步方法。如果多个类中都存在静态方法，那么每个类只能有一个线程执行静态同步方法，不管调用的是该类对象的哪个静态同步方法。<br><br></p>
+<h3 id="实例方法中的同步块">实例方法中的同步块</h3><p>其实你没有必要对整个方法进行同步化的，有时候更好的方法是对方法中的一部分代码进行同步，java允许使用synchronized关键字对部分代码进行同步。</p>
+<p>下面就是对部分代码进行同步的例子：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">(<span class="keyword">int</span> <span class="keyword">value</span>)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    synchronized(<span class="keyword">this</span>)&#123;</span><br><span class="line">       <span class="keyword">this</span>.count += <span class="keyword">value</span>;   </span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>上述代码使用synchronized关键字将方法中的部分代码进行同步化。现在这个方法就等同于实例同步方法。</p>
+<p>synchronized同步块构建时使用了this变量作为构造参数，这个this变量就是代表调用这个方法的实例对象。这个作为构造参数的实例对象就被称为监视器。这段同步代码就是同步于监视器上的。上面提到的实例同步方法也会把它所属的对象作为监视器。</p>
+<p>java只允许一个线程执行同步于同一个监视器的同步块代码。</p>
+<p>下面两个例子都是同步于调用它们的实例对象，因此在同步方面它们的作用是一样的：</p>
+<figure class="highlight processing"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> class MyClass &#123;</span><br><span class="line"> </span><br><span class="line">   <span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> log1(<span class="keyword">String</span> msg1, <span class="keyword">String</span> msg2)&#123;</span><br><span class="line">      <span class="built_in">log</span>.writeln(msg1);</span><br><span class="line">      <span class="built_in">log</span>.writeln(msg2);</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line"> </span><br><span class="line">   <span class="keyword">public</span> <span class="keyword">void</span> log2(<span class="keyword">String</span> msg1, <span class="keyword">String</span> msg2)&#123;</span><br><span class="line">      <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">         <span class="built_in">log</span>.writeln(msg1);</span><br><span class="line">         <span class="built_in">log</span>.writeln(msg2);</span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>因此只能有一个线程执行例子中的任意一个同步方法。</p>
+<p>如果log2方法中的构造参数不是this而是其他对象，那么每个方法都可以被一个线程执行(log1方法和log2方法分别被thread A 和 thread B执行)。<br><br></p>
+<h3 id="静态方法中的同步块">静态方法中的同步块</h3><p>下面两个例子是静态同步方法。这两个方法都同步于方法所属的类对象上：</p>
+<figure class="highlight processing"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> class MyClass &#123;</span><br><span class="line"></span><br><span class="line">   <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> log1(<span class="keyword">String</span> msg1, <span class="keyword">String</span> msg2)&#123;</span><br><span class="line">      <span class="built_in">log</span>.writeln(msg1);</span><br><span class="line">      <span class="built_in">log</span>.writeln(msg2);</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line"> </span><br><span class="line">   <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> log2(<span class="keyword">String</span> msg1, <span class="keyword">String</span> msg2)&#123;</span><br><span class="line">      <span class="keyword">synchronized</span>(MyClass.class)&#123;</span><br><span class="line">         <span class="built_in">log</span>.writeln(msg1);</span><br><span class="line">         <span class="built_in">log</span>.writeln(msg2);  </span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>  同一时刻只能有一个线程可以执行该类对象的任意一个同步方法。</p>
+<p>  同样的，如果log中synchronized的构造参数不是MyClass.class，那么可以有两个线程分别同时执行log1和log2方法。<br>  <br></p>
+<h3 id="java_synchronized实例">java synchronized实例</h3><p>下面这个实例开启两个线程调用同一个实例的add方法，当然同一时刻只能有一个线程可以执行add方法，因为add方法是一个实例同步方法：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">Counter</span>&#123;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">long</span> count = <span class="number">0</span>;</span><br><span class="line">   </span><br><span class="line">    <span class="function"><span class="keyword">public</span> synchronized <span class="keyword">void</span> <span class="title">add</span><span class="params">(<span class="keyword">long</span> <span class="keyword">value</span>)</span></span>&#123;</span><br><span class="line">      <span class="keyword">this</span>.count += <span class="keyword">value</span>;</span><br><span class="line">    &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">public <span class="class"><span class="keyword">class</span> <span class="title">CounterThread</span> <span class="keyword"><span class="keyword">extends</span></span> <span class="title">Thread</span>&#123;</span></span><br><span class="line"></span><br><span class="line">     <span class="keyword">protected</span> <span class="type">Counter</span> counter = <span class="literal">null</span>;</span><br><span class="line"></span><br><span class="line">     public <span class="type">CounterThread</span>(<span class="type">Counter</span> counter)&#123;</span><br><span class="line">        <span class="keyword">this</span>.counter = counter;</span><br><span class="line">     &#125;</span><br><span class="line"></span><br><span class="line">     public void run() &#123;</span><br><span class="line">	<span class="keyword">for</span>(int i=<span class="number">0</span>; i&lt;<span class="number">10</span>; i++)&#123;</span><br><span class="line">           counter.add(i);</span><br><span class="line">        &#125;</span><br><span class="line">     &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">Example</span> &#123;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">     Counter counter = <span class="keyword">new</span> Counter();</span><br><span class="line">     Thread  threadA = <span class="keyword">new</span> CounterThread(counter);</span><br><span class="line">     Thread  threadB = <span class="keyword">new</span> CounterThread(counter);</span><br><span class="line"></span><br><span class="line">     threadA.start();</span><br><span class="line">     threadB.start(); </span><br><span class="line">   &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>同一个Counter对象被当做构造函数参数传给了两个线程。因为add方法是一个实例方法，同时还被同步化了，所以一次只能有一个线程执行add方法。另外一个线程将等到第一个线程执行完add方法后才能执行add方法。</p>
+<p>如果两个线程分别持有一个不同的Counter实例的话，那么两个线程同时执行add方法没有一点问题，因为它们调用的是不同实例的同步方法，而这些同步方法是同步于不同的对象上，因此调用不会被阻塞。代码如下：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">Example</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">      Counter counterA = <span class="keyword">new</span> Counter();</span><br><span class="line">      Counter counterB = <span class="keyword">new</span> Counter();</span><br><span class="line">      Thread  threadA = <span class="keyword">new</span> CounterThread(counterA);</span><br><span class="line">      Thread  threadB = <span class="keyword">new</span> CounterThread(counterB);</span><br><span class="line"></span><br><span class="line">      threadA.start();</span><br><span class="line">      threadB.start(); </span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>threadA和threadB不再持有同一个Counter对象的引用。counterA和counterB中的add方法同步于各自所属的对象，所以threadA对counterA的add方法的调用不会阻塞threadB对counterB的add方法的调用。<br><br></p>
+<h3 id="java同步工具">java同步工具</h3><p>synchronized机制是java对共享数据进行同步控制的第一个机制，但是它不够先进，这也是java 5提供一整套java同步工具类来帮助开发者实现比synchronized机制更严谨的同步控制的原因。</p>
+  
 	</div>
 		<footer class="article-footer clearfix">
 <div class="article-catetags">
@@ -112,7 +160,7 @@
 
 	<div class="article-share" id="share">
 	
-	  <div data-url="http://yoursite.com/2015/04/27/译-java多线程与同步机制系列(10)/" data-title="[译]java多线程与同步机制系列(10)--  | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  <div data-url="http://yoursite.com/2015/04/27/译-java多线程与同步机制系列(10)/" data-title="[译]java多线程与同步机制系列(10)-- java同步块 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
 	  </div>
 	
 	</div>
@@ -138,7 +186,7 @@
 
 	
 <section id="comments" class="comment">
-	<div class="ds-thread" data-thread-key="2015/04/27/译-java多线程与同步机制系列(10)/" data-title="[译]java多线程与同步机制系列(10)-- " data-url="http://yoursite.com/2015/04/27/译-java多线程与同步机制系列(10)/"></div>
+	<div class="ds-thread" data-thread-key="2015/04/27/译-java多线程与同步机制系列(10)/" data-title="[译]java多线程与同步机制系列(10)-- java同步块" data-url="http://yoursite.com/2015/04/27/译-java多线程与同步机制系列(10)/"></div>
 </section>
 
 
@@ -148,7 +196,7 @@
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
  
- 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#java_synchronized关键字"><span class="toc-number">1.</span> <span class="toc-text">java synchronized关键字</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#同步实例方法"><span class="toc-number">2.</span> <span class="toc-text">同步实例方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#同步静态方法"><span class="toc-number">3.</span> <span class="toc-text">同步静态方法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#实例方法中的同步块"><span class="toc-number">4.</span> <span class="toc-text">实例方法中的同步块</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#静态方法中的同步块"><span class="toc-number">5.</span> <span class="toc-text">静态方法中的同步块</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#java_synchronized实例"><span class="toc-number">6.</span> <span class="toc-text">java synchronized实例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#java同步工具"><span class="toc-number">7.</span> <span class="toc-text">java同步工具</span></a></li></ol>
  
   </div>
 
