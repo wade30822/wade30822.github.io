@@ -1,0 +1,468 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>[译]java多线程与同步机制系列(13)--线程信号 | 朱家骅的Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="朱家骅">
+    
+
+    
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/thread-signaling.html)
+线程信号的的作用是线程与其他线程之间发送信号来通信。除此之外，线程信号可以让一个线程等待另一个线程给它发送信号。比如线程B可能需要等待线程A给它发送一个信号表明线程B需要的数据已经准备好了。
+通过共享对象通信一种线程间最简单的发送信号的方法就是通过给共享">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]java多线程与同步机制系列(13)--线程信号">
+<meta property="og:url" content="http://yoursite.com/2015/05/01/译-java多线程与同步机制系列(13)/index.html">
+<meta property="og:site_name" content="朱家骅的Blog">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/thread-signaling.html)
+线程信号的的作用是线程与其他线程之间发送信号来通信。除此之外，线程信号可以让一个线程等待另一个线程给它发送信号。比如线程B可能需要等待线程A给它发送一个信号表明线程B需要的数据已经准备好了。
+通过共享对象通信一种线程间最简单的发送信号的方法就是通过给共享">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/strings-wait-notify.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(13)--线程信号">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/thread-signaling.html)
+线程信号的的作用是线程与其他线程之间发送信号来通信。除此之外，线程信号可以让一个线程等待另一个线程给它发送信号。比如线程B可能需要等待线程A给它发送一个信号表明线程B需要的数据已经准备好了。
+通过共享对象通信一种线程间最简单的发送信号的方法就是通过给共享">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="朱家骅的Blog">朱家骅的Blog</a></h1>
+				<h2 class="blog-motto">把流行的技术挂在嘴边，不如把过时的技术记在心里</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/categories">分类</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:yoursite.com">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/05/01/译-java多线程与同步机制系列(13)/" title="[译]java多线程与同步机制系列(13)--线程信号" itemprop="url">[译]java多线程与同步机制系列(13)--线程信号</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-01T00:42:23.000Z" itemprop="datePublished"> 发表于 2015-05-01</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#通过共享对象通信"><span class="toc-number">1.</span> <span class="toc-text">通过共享对象通信</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#忙等待"><span class="toc-number">2.</span> <span class="toc-text">忙等待</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#wait(),notify(),notifyAll()"><span class="toc-number">3.</span> <span class="toc-text">wait(),notify(),notifyAll()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#信号丢失"><span class="toc-number">4.</span> <span class="toc-text">信号丢失</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#虚假唤醒"><span class="toc-number">5.</span> <span class="toc-text">虚假唤醒</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#多个线程等待同一个信号"><span class="toc-number">6.</span> <span class="toc-text">多个线程等待同一个信号</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#不要在String对象或全局对象上调用wait方法"><span class="toc-number">7.</span> <span class="toc-text">不要在String对象或全局对象上调用wait方法</span></a></li></ol>
+		
+		</div>
+		
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/thread-signaling.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/thread-signaling.html</a>)</p>
+<p>线程信号的的作用是线程与其他线程之间发送信号来通信。除此之外，线程信号可以让一个线程等待另一个线程给它发送信号。比如线程B可能需要等待线程A给它发送一个信号表明线程B需要的数据已经准备好了。<br><br></p>
+<h3 id="通过共享对象通信">通过共享对象通信</h3><p>一种线程间最简单的发送信号的方法就是通过给共享对象的某些成员变量设置信号值。线程A可能会在一个同步块中将hasDataToProcess的值设为true，随后线程B可能会在一个同步块中读取hasDataToProcess的值来判断是否数据准备好了：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MySignal</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> hasDataToProcess = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">boolean</span> <span class="title">hasDataToProcess</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.hasDataToProcess;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">setHasDataToProcess</span><span class="params">(<span class="keyword">boolean</span> hasData)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.hasDataToProcess = hasData;  </span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>线程A和线程B必须持有对同一个MySignal对象的引用才能让这次信号通信起作用。如果线程A和线程B持有对不同MySignal对象的引用的话，它们不可能检测到相互之间发送的信号。这里的MySignal对象没有包含待处理数据，所以待处理数据在MySignal对象外部。<br><br></p>
+<h3 id="忙等待">忙等待</h3><p>线程B需要等待数据准备完毕才能开始执行，也就是说，线程B在等下线程A的信号，这个信号就是线程A将hasDataToProcess变量的值设为true。下面就是线程B的执行逻辑，它不断的循环访问hasDataToProcess变量直到它为true：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">protected</span> MySignal sharedSignal <span class="subst">=</span> <span class="attribute">...</span></span><br><span class="line"></span><br><span class="line"><span class="attribute">...</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">while</span>(<span class="subst">!</span>sharedSignal<span class="built_in">.</span>hasDataToProcess())&#123;</span><br><span class="line">  <span class="comment">//do nothing... busy waiting</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意到while循环一直在循环访问hasDataToProcess变量直到它返回true，这就叫做忙等待，意思是线程B在等待时一直处于运行状态。<br><br></p>
+<h3 id="wait(),notify(),notifyAll()">wait(),notify(),notifyAll()</h3><p>忙等待对于运行该等待线程的CPU来说不是一个对CPU有效利用的方式，除非线程平均等待时间非常的短。另外，如果等待线程在信号到来之前一直处于休眠或者非活跃状态的话，那就使得线程间通信变得更加智能。</p>
+<p>java内置的线程等待机制可以使线程在等待时进入非活跃状态，java.lang.Object类定义了三个方法wait(),notify(),notifyAll()实现了该机制。</p>
+<p>线程调用对象的wait()方法的话会进入非活跃状态直到其他线程调用对象的notify()等待线程重新变成活跃状态。为了能够调用对象的wait()方法或者notify()方法，执行线程必须获得该对象的锁。换句话说，调用线程必须在一个同步块里面调用wait或者notify方法才能有效。下面就是MyWaitNotify类，这是一个MySignal的变体，它使用了wait()方法和notify()方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MonitorObject</span></span>&#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyWaitNotify</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  MonitorObject myMonitorObject = <span class="keyword">new</span> MonitorObject();</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doWait</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(myMonitorObject)&#123;</span><br><span class="line">      <span class="keyword">try</span>&#123;</span><br><span class="line">        myMonitorObject.wait();</span><br><span class="line">      &#125; <span class="keyword">catch</span>(InterruptedException e)&#123;...&#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doNotify</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(myMonitorObject)&#123;</span><br><span class="line">      myMonitorObject.notify();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>等待线程调用doWait方法进入等待状态，通知线程调用doNotify方法激活等待线程。另外还有一个notifyAll方法将激活所有该对象上的等待线程。</p>
+<p>正如你所看见的，线程都是在同步块中调用wait方法和notify方法，这是必须的！！！线程不可以在没有获得该对象的锁的情况下调用wait，notify，notifyAll方法。如果没有在同步块中调用这些方法，则会抛出一个IllegalMonitorStateException异常。</p>
+<p>但是，这是怎么做到的呢？等待线程在执行同步块的时候难道没有获得对该对象的锁？如果获得了该对象的锁的话，通知线程怎么可以进入到同步块中去调用notify方法呢？<br>答案是当一个线程调用wait方法后他便释放了对该对象的锁，这样就允许其他线程调用wait或者notify方法了，因为这些方法必须在同步块中调用。</p>
+<p>一旦线程被唤醒了它也无法立即退出wait方法调用直到调用notify的线程退出同步块。换句话说，被唤醒的线程必须重新获得对该对象的锁才能退出wait调用，因为wait调用是在同步块中进行的。如果多个线程通过nptifyAll方法被唤醒的话，那么一次只有一个线程可以退出wait方法调用，因为每个线程都必须获得该对象的锁才能退出wait调用。<br><br></p>
+<h3 id="信号丢失">信号丢失</h3><p>notify和notifyAll不会保存调用它们的方法，有可能此时根本没有等待线程，那么通知信号就被白白丢弃了。因此，如果线程在其他线程调用wait方法前调用notify方法的话，那么这个信号就会被等待线程错过。而这将有可能会是等待线程永远都处于等待状态，无法被激活，因为通知信号已经丢失。</p>
+<p>为了防止这种情况发生，我们可以将通知信号存储在对象成员变量中，在下面的例子中，MyWaitNotify将通知信号保存在了一个成员变量中：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyWaitNotify2</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  MonitorObject myMonitorObject = <span class="keyword">new</span> MonitorObject();</span><br><span class="line">  <span class="keyword">boolean</span> wasSignalled = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doWait</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(myMonitorObject)&#123;</span><br><span class="line">      <span class="keyword">if</span>(!wasSignalled)&#123;</span><br><span class="line">        <span class="keyword">try</span>&#123;</span><br><span class="line">          myMonitorObject.wait();</span><br><span class="line">         &#125; <span class="keyword">catch</span>(InterruptedException e)&#123;...&#125;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">//clear signal and continue running.</span></span><br><span class="line">      wasSignalled = <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doNotify</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(myMonitorObject)&#123;</span><br><span class="line">      wasSignalled = <span class="keyword">true</span>;</span><br><span class="line">      myMonitorObject.notify();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们注意到通知线程在调用notify方法时将wasSignalled变量设为true，同时等待线程在调用wait方法前也会检查wasSigganlled成员变量，只有当该变量值为false的时候才调用wait方法，否则它有可能永远无法被唤醒，换句话说就是它只会在前一次doWait方法和这一次doWait方法之间这段时间内没有收到任何信号的情况下调用wait方法。<br><br></p>
+<h3 id="虚假唤醒">虚假唤醒</h3><p>由于一些无法解释的原因，线程有可能在压根没有notify和notifyAll方法被调用的情况下被唤醒。这就叫做虚假唤醒，等待线程被莫名其秒的被唤醒。</p>
+<p>如果虚假唤醒出现在上面的MyWaitNotify2的doWait方法中的话，等待线程将在没有收到激活信号的情况下继续运行，这将给程序带来严重的后果。</p>
+<p>为了消除虚假唤醒带来的后果，我们应该在while循环中检查wasSiganlled的值而不是在if语句中。这个while循环就叫做自旋锁。被唤醒的线程自旋直到while循坏条件为false，下面就是基于MyWaitNotify2做的修改版：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyWaitNotify3</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  MonitorObject myMonitorObject = <span class="keyword">new</span> MonitorObject();</span><br><span class="line">  <span class="keyword">boolean</span> wasSignalled = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doWait</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(myMonitorObject)&#123;</span><br><span class="line">      <span class="keyword">while</span>(!wasSignalled)&#123;</span><br><span class="line">        <span class="keyword">try</span>&#123;</span><br><span class="line">          myMonitorObject.wait();</span><br><span class="line">         &#125; <span class="keyword">catch</span>(InterruptedException e)&#123;...&#125;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">//clear signal and continue running.</span></span><br><span class="line">      wasSignalled = <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doNotify</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(myMonitorObject)&#123;</span><br><span class="line">      wasSignalled = <span class="keyword">true</span>;</span><br><span class="line">      myMonitorObject.notify();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们注意到上面代码中用while循环替换了if判断，这样，当等待线程在没有收到信号的情况下被唤醒后，wasSignalled变量的值依然为false，那么while循环判断为true，线程再次执行wait方法进入等待状态。<br><br></p>
+<h3 id="多个线程等待同一个信号">多个线程等待同一个信号</h3><p>如果有多个线程在等待信号，并且被notifyAll方法一次性激活的话，使用while循环也是一种不错的解决方案。由于只允许一个等待线程继续执行，意味着只有一个线程重新获得该对象的锁，退出wait调用并将wasSignalled标志清空，一旦该线程退出了doWait方法中的同步块，其他线程就可以获得锁并且退出wait调用，然后检查wasSignalled变量的值，由于前一个线程已经把wasSignalled对象值清空了，所以剩下的线程又会调用wait方法进入等待状态，等待下一个信号到来。<br><br></p>
+<h3 id="不要在String对象或全局对象上调用wait方法">不要在String对象或全局对象上调用wait方法</h3><p>这篇博客的早期版本中MyWaitNotify类使用了一个String对象作为监视器，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyWaitNotify</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  String myMonitorObject = <span class="string">""</span>;</span><br><span class="line">  <span class="keyword">boolean</span> wasSignalled = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doWait</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(myMonitorObject)&#123;</span><br><span class="line">      <span class="keyword">while</span>(!wasSignalled)&#123;</span><br><span class="line">        <span class="keyword">try</span>&#123;</span><br><span class="line">          myMonitorObject.wait();</span><br><span class="line">         &#125; <span class="keyword">catch</span>(InterruptedException e)&#123;...&#125;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">//clear signal and continue running.</span></span><br><span class="line">      wasSignalled = <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doNotify</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(myMonitorObject)&#123;</span><br><span class="line">      wasSignalled = <span class="keyword">true</span>;</span><br><span class="line">      myMonitorObject.notify();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对String对象调用wait或者notify方法会出现的问题是java虚拟机在内部会将相同值的String常量对象只保存一个，也就是说即使有两个MyWaitNotify对象，每个对象的myMonitorObject对象的值相同，那么它们将指向同一个String对象。那么就有可能发生这样一个问题：线程A调用doWait方法进入休眠状态会被线程B调用doNotify方法所激活。    </p>
+<p>下面是该问题的描述图：</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/strings-wait-notify.png" alt="String常量对象带来的问题"></p>
+<p>记住，即使四个线程对同一个对象调用wait或者notify方法，但是信号都只是被保存到单独的MyWaitNotify对象中，对MyWaitNotify1对象调用doNotify方法可能会激活MyWaitNotify2对象上的等待线程，但是信号只是被保存在MyWaitNotify1对象中。</p>
+<p>这看上去不会出现大问题，毕竟即使线程A或线程B被MyWaitNotify2唤醒的话，它们都会通过while循环查看信号状态，由于MyWaitNotify1对象的doNotify方法没有被调用，所以它们会执行wait方法继续等待。这种情况就是上面提到的虚假唤醒，线程A和线程B都没有被信号唤醒，但是while循环可以解决这个问题，两个线程又重新回到等待状态了。</p>
+<p>但是问题是，doNotify方法调用的时notify方法而不是notifyAll方法，那么线程A，B，C，D中只有一个可以被唤醒。所以，如果线程A或B被本来应该唤醒线程C或D的信号所错误唤醒的话，那么线程A或B将通过while循环查看信号状态，由于myWaitNotify1的doNotify方法没有被调用，所以wasSignalled为false，那么线程A或B将再次执行wait方法进入等待状态，而线程C或D没有机会去查看本来就是用来激活它们的信号，也就是说，信号丢失了。这种情况就是上面提到的信号丢失。线程C或D错过了发给它们的信号。</p>
+<p>如果doNotify方法中使用的是notifyAll方法而不是notify方法的话，所有的线程都将会被唤醒并检查信号，那么即使线程A或线程B被错误唤醒，但是它们检查信号时发现没有信号，那么它们都会重新回到等待状态，而线程C或D激活后查看信号，发现有信号则将继续执行，另外一个线程则重新回到等待状态，因为前一个线程已经将信号清空了。</p>
+<p>你可能会想着以后直接用notifyAll来激活线程而不是notify方法，但是这是不明智的，因为如果只有一个线程可以对信号产生响应就没有任何理由来唤醒所有的线程。</p>
+<p>所以一定要记住，不要在全局对象，String常量上使用wait/notify/notifyAll方法。监视器(即被加锁的对象)必须对于它所属的对象是独立的。就像上面的MyWaitNotify3类一样，每个该类的对象都持有一个自己的MonitorObject对象，而不会在空的String常量上调用wait或notify方法。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://yoursite.com/2015/05/01/译-java多线程与同步机制系列(13)/" data-title="[译]java多线程与同步机制系列(13)--线程信号 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/04/30/译-java多线程与同步机制系列(12)/"  title="[译]java多线程与同步机制系列(12)--java ThreadLocal类">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制系列(12)--java ThreadLocal类
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/05/01/译-java多线程与同步机制系列(13)/" data-title="[译]java多线程与同步机制系列(13)--线程信号" data-url="http://yoursite.com/2015/05/01/译-java多线程与同步机制系列(13)/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#通过共享对象通信"><span class="toc-number">1.</span> <span class="toc-text">通过共享对象通信</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#忙等待"><span class="toc-number">2.</span> <span class="toc-text">忙等待</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#wait(),notify(),notifyAll()"><span class="toc-number">3.</span> <span class="toc-text">wait(),notify(),notifyAll()</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#信号丢失"><span class="toc-number">4.</span> <span class="toc-text">信号丢失</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#虚假唤醒"><span class="toc-number">5.</span> <span class="toc-text">虚假唤醒</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#多个线程等待同一个信号"><span class="toc-number">6.</span> <span class="toc-text">多个线程等待同一个信号</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#不要在String对象或全局对象上调用wait方法"><span class="toc-number">7.</span> <span class="toc-text">不要在String对象或全局对象上调用wait方法</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">归档</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+  </div>
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>13</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://www.csdn.net" target="_blank" title="CSDN">CSDN</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1685825420&verifier=f33b37d3&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> 大家好，我是朱家骅。 <br/>
+			欢迎来到我的技术博客！！！</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1685825420" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<a href="mailto:317560406@qq.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="朱家骅">朱家骅</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"flash03"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
