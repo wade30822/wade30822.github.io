@@ -1,0 +1,450 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>[译]java多线程与同步机制系列(14)--线程死锁 | 朱家骅的Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="朱家骅">
+    
+
+    
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/deadlock.html)
+线程死锁当两个或多个线程都试图获取对方所持有的锁时就会发生死锁。
+举个例子，线程1持有A对象的锁，线程2持有B对象的锁，现在线程1企图获得B对象的锁，而线程2企图获得A对象的锁，这种情况下就会发生死锁，因为线程1永远无法获得B对象的锁，线程2永远无法获得A对象的锁，除此">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]java多线程与同步机制系列(14)--线程死锁">
+<meta property="og:url" content="http://yoursite.com/2015/05/02/译-java多线程与同步机制系列(14)/index.html">
+<meta property="og:site_name" content="朱家骅的Blog">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/deadlock.html)
+线程死锁当两个或多个线程都试图获取对方所持有的锁时就会发生死锁。
+举个例子，线程1持有A对象的锁，线程2持有B对象的锁，现在线程1企图获得B对象的锁，而线程2企图获得A对象的锁，这种情况下就会发生死锁，因为线程1永远无法获得B对象的锁，线程2永远无法获得A对象的锁，除此">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(14)--线程死锁">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/deadlock.html)
+线程死锁当两个或多个线程都试图获取对方所持有的锁时就会发生死锁。
+举个例子，线程1持有A对象的锁，线程2持有B对象的锁，现在线程1企图获得B对象的锁，而线程2企图获得A对象的锁，这种情况下就会发生死锁，因为线程1永远无法获得B对象的锁，线程2永远无法获得A对象的锁，除此">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="朱家骅的Blog">朱家骅的Blog</a></h1>
+				<h2 class="blog-motto">把流行的技术挂在嘴边，不如把过时的技术记在心里</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/categories">分类</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:yoursite.com">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/05/02/译-java多线程与同步机制系列(14)/" title="[译]java多线程与同步机制系列(14)--线程死锁" itemprop="url">[译]java多线程与同步机制系列(14)--线程死锁</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-02T00:24:12.000Z" itemprop="datePublished"> 发表于 2015-05-02</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#线程死锁"><span class="toc-number">1.</span> <span class="toc-text">线程死锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#更加复杂的死锁"><span class="toc-number">2.</span> <span class="toc-text">更加复杂的死锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#数据库死锁"><span class="toc-number">3.</span> <span class="toc-text">数据库死锁</span></a></li></ol>
+		
+		</div>
+		
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/deadlock.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/deadlock.html</a>)</p>
+<h3 id="线程死锁">线程死锁</h3><p>当两个或多个线程都试图获取对方所持有的锁时就会发生死锁。</p>
+<p>举个例子，线程1持有A对象的锁，线程2持有B对象的锁，现在线程1企图获得B对象的锁，而线程2企图获得A对象的锁，这种情况下就会发生死锁，因为线程1永远无法获得B对象的锁，线程2永远无法获得A对象的锁，除此之外，两个线程永远不会察觉到这种情况，它们将继续在A对象和B对象上阻塞。</p>
+<p>这种情况如下所示：</p>
+<figure class="highlight actionscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Thread <span class="number">1</span>  locks A, waits <span class="keyword">for</span> B</span><br><span class="line">Thread <span class="number">2</span>  locks B, waits <span class="keyword">for</span> A</span><br></pre></td></tr></table></figure>
+<p>下面是一个TreeNode类在不同实体上调用同步方法的例子：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TreeNode</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">  TreeNode parent   = <span class="keyword">null</span>;  </span><br><span class="line">  List     children = <span class="keyword">new</span> ArrayList();</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">addChild</span><span class="params">(TreeNode child)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(!<span class="keyword">this</span>.children.contains(child)) &#123;</span><br><span class="line">      <span class="keyword">this</span>.children.add(child);</span><br><span class="line">      child.setParentOnly(<span class="keyword">this</span>);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">addChildOnly</span><span class="params">(TreeNode child)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(!<span class="keyword">this</span>.children.contains(child)&#123;</span><br><span class="line">      <span class="keyword">this</span>.children.add(child);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">setParent</span><span class="params">(TreeNode parent)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.parent = parent;</span><br><span class="line">    parent.addChildOnly(<span class="keyword">this</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">setParentOnly</span><span class="params">(TreeNode parent)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.parent = parent;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果线程1调用了parent.addChild(child)方法同时线程2调用child.setParent(parent)方法，那么对于同一个parent和child就会发生死锁。下面是发生这种情况的伪代码：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span> <span class="number">1</span>: <span class="keyword">parent</span><span class="built_in">.</span>addChild(child); <span class="comment">//locks parent</span></span><br><span class="line">          <span class="subst">--&gt;</span> child<span class="built_in">.</span>setParentOnly(<span class="keyword">parent</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">Thread</span> <span class="number">2</span>: child<span class="built_in">.</span>setParent(<span class="keyword">parent</span>); <span class="comment">//locks child</span></span><br><span class="line">          <span class="subst">--&gt;</span> <span class="keyword">parent</span><span class="built_in">.</span>addChildOnly()</span><br></pre></td></tr></table></figure>
+<p>首先，线程1调用parent.addChild(child),因为addChild是一个同步方法，所以线程1将获得parent对象的锁而使其他线程无法访问parent对象。然后线程2调用child.setParent(parent)，因为setParent也是一个同步方法，所以线程2将获得child对象的锁而使其他线程无法访问。</p>
+<p>现在parent和child对象都被不同的线程持有锁，接下来线程1调用child.setParentOnly方法，但是现在child对象的锁被线程2持有没有释放，所以这个方法调用被阻塞。线程2调用parent.addChildOnly方法，但是parent对象的锁被线程1持有没有释放，所以这个方法调用被阻塞。现在两个线程都在等待对方持有的锁释放而导致死锁发生。</p>
+<p>注意到上面所说的情况是说同时发生，并且两个线程中parent和child都是指同一个。上面代码可能会在很长一段时间内运行良好但是却有可能突然发生死锁。</p>
+<p>死锁的发生确实需要两个线程同时获取锁，如果不是同时，那么在第一个代码例子中，线程1比线程2早一点点，那么线程1获得了对象A和对象B的锁，然后线程2将阻塞知道获取对象B的锁，那么这种情况下就不会发生死锁。因为线程调度经常是不可预测的，所以我们无法预测死锁什么时候会发生，只能说死锁可能发生。<br><br></p>
+<h3 id="更加复杂的死锁">更加复杂的死锁</h3><p>死锁可能在超过两个线程的情况下发生。这就让我们更难检测到死锁发生的具体位置。下面就是一个例子：</p>
+<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span> <span class="number">1</span>  locks A, waits for B</span><br><span class="line"><span class="keyword">Thread</span> <span class="number">2</span>  locks B, waits for <span class="keyword">C</span></span><br><span class="line"><span class="keyword">Thread</span> <span class="number">3</span>  locks <span class="keyword">C</span>, waits for <span class="keyword">D</span></span><br><span class="line"><span class="keyword">Thread</span> <span class="number">4</span>  locks <span class="keyword">D</span>, waits for A</span><br></pre></td></tr></table></figure>
+<p>线程1在等待线程2，线程2在等待线程3，线程3在等待线程4，线程4在等待线程1，死锁！！！！！<br><br></p>
+<h3 id="数据库死锁">数据库死锁</h3><p>死锁发生的更复杂的情形便是在数据库事件中。一个数据库事件可能包含多条SQL更新语句，当一个事件需要更新一条记录时，它会获得该记录的锁，那么其他尝试获取该记录锁的事件便会被阻塞直到当前获取该记录锁的事件执行完毕。一个事件中的多个更新请求可能会对多条记录上锁。</p>
+<p>如果多个事件同时尝试获取相同记录的锁，那么就有可能发生死锁。比如：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Transaction 1, request 1, locks record 1 for <span class="operator"><span class="keyword">update</span></span><br><span class="line"><span class="keyword">Transaction</span> <span class="number">2</span>, request <span class="number">1</span>, locks record <span class="number">2</span> <span class="keyword">for</span> <span class="keyword">update</span></span><br><span class="line"><span class="keyword">Transaction</span> <span class="number">1</span>, request <span class="number">2</span>, tries <span class="keyword">to</span> <span class="keyword">lock</span> record <span class="number">2</span> <span class="keyword">for</span> <span class="keyword">update</span>.</span><br><span class="line"><span class="keyword">Transaction</span> <span class="number">2</span>, request <span class="number">2</span>, tries <span class="keyword">to</span> <span class="keyword">lock</span> record <span class="number">1</span> <span class="keyword">for</span> <span class="keyword">update</span>.</span></span><br></pre></td></tr></table></figure>
+<p>因为这些锁被不同的请求持有，而且事件中需要的锁数据库是不可能提前知道，所以在数据库中很难检测和预防死锁。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://yoursite.com/2015/05/02/译-java多线程与同步机制系列(14)/" data-title="[译]java多线程与同步机制系列(14)--线程死锁 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/05/01/译-java多线程与同步机制系列(13)/"  title="[译]java多线程与同步机制系列(13)--线程信号">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制系列(13)--线程信号
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/05/02/译-java多线程与同步机制系列(14)/" data-title="[译]java多线程与同步机制系列(14)--线程死锁" data-url="http://yoursite.com/2015/05/02/译-java多线程与同步机制系列(14)/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#线程死锁"><span class="toc-number">1.</span> <span class="toc-text">线程死锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#更加复杂的死锁"><span class="toc-number">2.</span> <span class="toc-text">更加复杂的死锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#数据库死锁"><span class="toc-number">3.</span> <span class="toc-text">数据库死锁</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">归档</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+  </div>
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>14</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://www.csdn.net" target="_blank" title="CSDN">CSDN</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1685825420&verifier=f33b37d3&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> 大家好，我是朱家骅。 <br/>
+			欢迎来到我的技术博客！！！</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1685825420" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<a href="mailto:317560406@qq.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="朱家骅">朱家骅</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"flash03"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
