@@ -1,0 +1,473 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>[译]java多线程与同步机制系列(15)--死锁预防 | 朱家骅的Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="朱家骅">
+    
+
+    
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/deadlock-prevention.html)
+在某些情况下死锁是可以预防的，接下来我将讲解以下三种死锁预防技术:
+
+锁排序
+锁超时
+死锁检测
+
+锁排序当多个线程需要相同的锁但是却以不同的顺序获取它们时就会发生死锁。如果你可以确保所有的锁都以确定的顺序被线程获取的话，那么死锁就不会发生，请看下面">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]java多线程与同步机制系列(15)--死锁预防">
+<meta property="og:url" content="http://yoursite.com/2015/05/03/译-java多线程与同步机制系列(15)/index.html">
+<meta property="og:site_name" content="朱家骅的Blog">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/deadlock-prevention.html)
+在某些情况下死锁是可以预防的，接下来我将讲解以下三种死锁预防技术:
+
+锁排序
+锁超时
+死锁检测
+
+锁排序当多个线程需要相同的锁但是却以不同的顺序获取它们时就会发生死锁。如果你可以确保所有的锁都以确定的顺序被线程获取的话，那么死锁就不会发生，请看下面">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/deadlock-detection-graph.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(15)--死锁预防">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/deadlock-prevention.html)
+在某些情况下死锁是可以预防的，接下来我将讲解以下三种死锁预防技术:
+
+锁排序
+锁超时
+死锁检测
+
+锁排序当多个线程需要相同的锁但是却以不同的顺序获取它们时就会发生死锁。如果你可以确保所有的锁都以确定的顺序被线程获取的话，那么死锁就不会发生，请看下面">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="朱家骅的Blog">朱家骅的Blog</a></h1>
+				<h2 class="blog-motto">把流行的技术挂在嘴边，不如把过时的技术记在心里</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/categories">分类</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:yoursite.com">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/05/03/译-java多线程与同步机制系列(15)/" title="[译]java多线程与同步机制系列(15)--死锁预防" itemprop="url">[译]java多线程与同步机制系列(15)--死锁预防</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-03T01:52:21.000Z" itemprop="datePublished"> 发表于 2015-05-03</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#锁排序"><span class="toc-number">1.</span> <span class="toc-text">锁排序</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#锁超时"><span class="toc-number">2.</span> <span class="toc-text">锁超时</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#死锁检测"><span class="toc-number">3.</span> <span class="toc-text">死锁检测</span></a></li></ol>
+		
+		</div>
+		
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/deadlock-prevention.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/deadlock-prevention.html</a>)</p>
+<p>在某些情况下死锁是可以预防的，接下来我将讲解以下三种死锁预防技术:</p>
+<ol>
+<li>锁排序</li>
+<li>锁超时</li>
+<li>死锁检测</li>
+</ol>
+<h3 id="锁排序">锁排序</h3><p>当多个线程需要相同的锁但是却以不同的顺序获取它们时就会发生死锁。如果你可以确保所有的锁都以确定的顺序被线程获取的话，那么死锁就不会发生，请看下面这个例子：</p>
+<figure class="highlight perl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">Thread <span class="number">1</span>:</span><br><span class="line"></span><br><span class="line">  lock A </span><br><span class="line">  lock B</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Thread <span class="number">2</span>:</span><br><span class="line"></span><br><span class="line">   <span class="keyword">wait</span> <span class="keyword">for</span> A</span><br><span class="line">   lock C (<span class="keyword">when</span> A locked)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Thread <span class="number">3</span>:</span><br><span class="line"></span><br><span class="line">   <span class="keyword">wait</span> <span class="keyword">for</span> A</span><br><span class="line">   <span class="keyword">wait</span> <span class="keyword">for</span> B</span><br><span class="line">   <span class="keyword">wait</span> <span class="keyword">for</span> C</span><br></pre></td></tr></table></figure>
+<p>如果一个线程，比如上面的线程3需要获取一些锁，那么它必须以固定的顺序获取，它绝对不允许在没有获得固定顺序的前一个锁(例如A)之前先获取下一个锁(例如B)。线程2或线程3都只能在获取锁A后才能获得锁C，因为锁A一直被线程1持有，所以线程2和线程3必须等到线程1释放锁A才能获取它，随后，它们只有获取了锁A后才能继续获取锁B或锁C。</p>
+<p>锁排序是一个简单有效的死锁预防机制。但是它的前提是你需要知道在获取一个锁前你需要先获取哪些锁，而这不是一件简单的事。<br><br></p>
+<h3 id="锁超时">锁超时</h3><p>另外一个死锁预防机制是对线程获取锁的过程设置超时时间，如果在这段时间之内没有获取到锁的话就将放弃。如果一个线程在规定时间内没有获取锁的话，该线程将做好备份并且释放所有已经获取的锁，然后等待一段随机时间后重新尝试获取。这个随机等待时间也给了其他线程一个机会去获取由该等待线程所释放的锁，这可以确保程序能够继续执行下去。</p>
+<p>下面这个例子中，两个线程以不同的顺序尝试获取相同的锁，随后线程超时备份并且释放自己持有的锁：</p>
+<figure class="highlight applescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">Thread <span class="number">1</span> locks A</span><br><span class="line">Thread <span class="number">2</span> locks B</span><br><span class="line"></span><br><span class="line">Thread <span class="number">1</span> attempts <span class="keyword">to</span> lock B <span class="keyword">but</span> <span class="keyword">is</span> blocked</span><br><span class="line">Thread <span class="number">2</span> attempts <span class="keyword">to</span> lock A <span class="keyword">but</span> <span class="keyword">is</span> blocked</span><br><span class="line"></span><br><span class="line">Thread <span class="number">1</span>'s lock attempt <span class="function_start"><span class="keyword">on</span></span> B <span class="keyword">times</span> out</span><br><span class="line">Thread <span class="number">1</span> backs up <span class="keyword">and</span> releases A <span class="keyword">as</span> well</span><br><span class="line">Thread <span class="number">1</span> waits randomly (e.g. <span class="number">257</span> millis) <span class="keyword">before</span> retrying.</span><br><span class="line"></span><br><span class="line">Thread <span class="number">2</span>'s lock attempt <span class="function_start"><span class="keyword">on</span></span> A <span class="keyword">times</span> out</span><br><span class="line">Thread <span class="number">2</span> backs up <span class="keyword">and</span> releases B <span class="keyword">as</span> well</span><br><span class="line">Thread <span class="number">2</span> waits randomly (e.g. <span class="number">43</span> millis) <span class="keyword">before</span> retrying.</span><br></pre></td></tr></table></figure>
+<p>在上面例子中，线程2将比线程1提前200毫秒开始重新尝试获取所需的锁，此时A，B锁都没有被线程持有，所以线程2成功持有所有的锁。由于锁A已被线程2持有所以线程1将继续等待。当线程2执行完毕后线程1将获取所有的锁，当然前提是其他线程没有在这其间获取到这些锁。</p>
+<p>需要注意的是，获取锁发生超时不代表就是发生了死锁，这只能说明当前持有该锁的线程需要很长时间执行其任务。</p>
+<p>除此之外，如果非常多的线程竞争相同的锁的话，那么就有可能会有很多线程不断的在同一时刻尝试获取锁，即使它们不断的超时和备份。在只有两个线程的情况下可能不会发生这种事，毕竟它们不太可能在0到500毫秒之间恰好选择同一时间等待后同时重新尝试获取。但是如果是10个或者20个线程的情况下，其中两个线程或多个线程等待同一时间后重新尝试获取锁的可能性将大大增加，此时将会发生上述的问题。</p>
+<p>另外一个锁超时机制的问题是不太可能对同步块设置超时时间。你不得不自定义一个锁类或者使用java 5中java.util.concurrency包提供的同步构造器。自定义锁类不是本文重点，这部分知识将在以后的博客中提到。<br><br></p>
+<h3 id="死锁检测">死锁检测</h3><p>死锁预防是在锁排序和锁超时很难实现或效果不好的情况下采用的复杂死锁预防机制。</p>
+<p>当线程获取到某个锁后，一般会记录在线程和锁对象的数据结构中(map,graph等等)。除此之外，当线程请求锁时，这个请求也会被记录在对应线程和锁对象的数据结构中。</p>
+<p>当线程请求一个锁时被拒绝，那么该线程将遍历锁的记录来检查死锁。比如说，线程A请求锁7，但锁7被线程B持有，然后线程A将检查线程B是否需要线程A已经持有的锁，如果是，那么发生死锁。</p>
+<p>当然死锁发生的情况会比两个线程各自持有对方需要的锁更加复杂。线程A可能等待线程B释放锁，线程B等待线程C释放锁，线程C等待线程D释放锁，线程D等待线程A释放锁。如果线程A需要检测是不是发生了死锁，那么它将遍历检查线程B请求的所有锁，然后根据这些锁检查线程C,然后线程D，随后它从线程D的请求锁中找到了自己持有的锁，那么它就知道发生死锁了。</p>
+<p>下面就是四个线程和四个锁的持有和请求关系，这个关系图可以帮助我们检查死锁:</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/deadlock-detection-graph.png" alt="死锁检查"></p>
+<p>那么，如果检测到了死锁，这些线程会做什么呢？</p>
+<p>一种可能是所有的线程备份并释放所有该线程持有的锁，然后等待一个随机时间后重新尝试获取锁。这就和锁超时机制一个样，只不过这里是死锁确实发生了，而锁超时只是获取锁超时而不一定发生了死锁。但是如果很多线程竞争相同的锁的话，就有可能不断发生死锁，从而使这些线程不断的备份和等待。</p>
+<p>另一种更好的方式是给线程设置一个优先级，这样就只有一小部分线程需要备份，其他线程可以继续持有锁继续运行，当然前提是这部分线程没有发生死锁。如果线程被赋予了优先级的话，有可能每次都是相同的线程获取高优先级，为了避免这种情况，我们可以采取随机的方式给线程赋予优先级。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://yoursite.com/2015/05/03/译-java多线程与同步机制系列(15)/" data-title="[译]java多线程与同步机制系列(15)--死锁预防 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/05/02/译-java多线程与同步机制系列(14)/"  title="[译]java多线程与同步机制系列(14)--线程死锁">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制系列(14)--线程死锁
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/05/03/译-java多线程与同步机制系列(15)/" data-title="[译]java多线程与同步机制系列(15)--死锁预防" data-url="http://yoursite.com/2015/05/03/译-java多线程与同步机制系列(15)/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#锁排序"><span class="toc-number">1.</span> <span class="toc-text">锁排序</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#锁超时"><span class="toc-number">2.</span> <span class="toc-text">锁超时</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#死锁检测"><span class="toc-number">3.</span> <span class="toc-text">死锁检测</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">归档</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+  </div>
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>15</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://www.csdn.net" target="_blank" title="CSDN">CSDN</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1685825420&verifier=f33b37d3&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> 大家好，我是朱家骅。 <br/>
+			欢迎来到我的技术博客！！！</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1685825420" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<a href="mailto:317560406@qq.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="朱家骅">朱家骅</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"flash03"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
