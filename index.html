@@ -77,6 +77,101 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
+      <a href="/2015/05/04/译-java多线程与同步机制系列(16)/" title="[译]java多线程与同步机制系列(16)--饥饿与公平" itemprop="url">[译]java多线程与同步机制系列(16)--饥饿与公平</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-04T00:25:09.000Z" itemprop="datePublished"> 发表于 2015-05-04</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/starvation-and-fairness.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/starvation-and-fairness.html</a>)</p>
+<p>如果CPU被其他线程占用而导致某个线程一直无法获得CPU执行时间，这就叫做饥饿。解决饥饿的办法叫做公平锁，意思是所有的线程都会获得执行的机会。<br><br></p>
+<h3 id="造成饥饿的原因">造成饥饿的原因</h3><p>在java中以下三点会导致线程饥饿：</p>
+<ol>
+<li>高优先级的线程占用了所有的CPU执行时间。</li>
+<li>线程在等待进入同步块时被无限期的阻塞，因为其他线程总是先比它进入同步块。</li>
+<li>线程无限等待一个对象锁，因为其他线程一直被唤醒获取该对象锁。</li>
+</ol>
+<h4 id="高优先级的线程占用了所有的CPU执行时间">高优先级的线程占用了所有的CPU执行时间</h4><p>你可以单独为某个线程设置一个优先级，高优先级的线程将获得更多的CPU执行时间。线程优先级的范围是1到10，具体的调度执行取决于当前操作系统。对于大多数程序而言最好不要修改线程的优先级。<br><br></p>
+<h4 id="线程无限期的等待进入同步块">线程无限期的等待进入同步块</h4><p>java同步块是造成线程饥饿的另一个原因。java同步块无法保证等待线程进入同步块的顺序。这意味着存在理论上的风险即某个线程一直无法进入同步块因为其他线程一直获得权限进入。这就造成了线程饥饿，线程将由于其他线程一直获得CPU执行时间而”饥饿至死”。<br><br></p>
+<h4 id="线程无限期等待一个对象锁">线程无限期等待一个对象锁</h4><p>在多个线程等待同一对象锁的情况下，notify方法没有规定哪个线程先被唤醒获取锁，也就是说任何一个等待线程都有可能被唤醒。因此这就存在其中一个线程一直无法被唤醒的风险，因为其他线程一直被唤醒而不是它。<br><br> </p>
+<h3 id="实现公平">实现公平</h3><p>虽然我们无法保证百分之百的公平，但是我们可以使用同步架构来尽可能的保证线程的公平性。</p>
+<p>首先我们来研究下一个简单的同步代码块:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Synchronizer</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">doSynchronized</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="comment">//do a lot of work which takes a long time</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果多个线程同时调用doSynchronized方法，其中一些线程将被阻塞直到第一个线程离开了该同步方法。如果多个线程被阻塞的话，那么无法确定接下来哪个线程可以进入该同步块。<br><br></p>
+<h4 id="使用锁而不是同步块">使用锁而不是同步块</h4><p>为了增加线程的公平性，我们通过锁来保证代码同步而不是同步块：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">Synchronizer</span>&#123;</span><br><span class="line">  Lock <span class="keyword">lock</span> = <span class="keyword">new</span> Lock();</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doSynchronized</span><span class="params">()</span> throws InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.<span class="keyword">lock</span>.<span class="keyword">lock</span>();</span><br><span class="line">      <span class="comment">//critical section, do a lot of work which takes a long time</span></span><br><span class="line">    <span class="keyword">this</span>.<span class="keyword">lock</span>.unlock();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意到doSynchronized方法不再被synchronized关键字修饰，临界区被lock.lock和lock.unlock调用守护。</p>
+<p>Lock的类的一个简单实现如下所示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span> isLocked      = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">private</span> Thread  lockingThread = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked      = <span class="keyword">true</span>;</span><br><span class="line">    lockingThread = Thread.currentThread();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">this</span>.lockingThread != Thread.currentThread())&#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException(</span><br><span class="line">        <span class="string">"Calling thread has not locked this lock"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked      = <span class="keyword">false</span>;</span><br><span class="line">    lockingThread = <span class="keyword">null</span>;</span><br><span class="line">    notify();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当你看完上面的Synchronizer类和Lock类后，你会注意到以下几点:</p>
+<ol>
+<li>如果多个线程同时调用lock.lock方法的话，线程将阻塞在lock方法处，因为lock方法是一个同步方法。</li>
+<li>如果lock对象的锁被一个线程持有，那么其他线程都将调用在while循环中的wait方法而阻塞。我们要记住，线程在调用wait方法后会释放自己持有的所有锁，在这里线程调用wait方法会释放lock对象的锁，这样会是其它阻塞在lock方法的线程可以进入lock方法内部。这样所有的线程都进入了lock方法并调用wait方法等待，除了当前获得正在运行的线程。</li>
+</ol>
+<p>现在在把目光集中在doSynchronized方法中，在lock和unlock之间有一段注释，写明了这一段代码将执行很长一段时间。我们假设这段时间比线程进入lock方法内部并且由于lock已被锁定而调用wait方法等待的时间长。这意味着线程大部分时间都消耗在了wait等待上而不是阻塞在lock方法上。</p>
+<p>之前曾提到同步块无法保证当多个线程等待进入同步块中时哪个线程先进入，同样notify方法也无法保证在多个线程调用wait的情况下哪个线程先被唤醒。当前这个版本的Lock类在公平性上和之前加了synchronized关键字的doSynchronized方法没什么区别，但是我们可以修改它。</p>
+<p>我们注意到，当前版本的Lock方法是调用自己的wait方法。如果每个线程调用不同对象的wait方法，那么Lock类就可以决定哪些对象调用notify方法，这样就可以选择性的唤醒线程。<br><br></p>
+<h4 id="公平锁">公平锁</h4><p>下面是把之前的Lock类改写成了一个公平锁FairLock类。你会看到在同步和wait/notify方法上与之前的Lock类有些许不同。</p>
+<p>从上面的Lock类到现在的FairLock经过了好几个过程，每个过程都需要修复一些我们之前提过的多线程问题，这里为了节省篇幅我就不多说了，大家可以在我的博客列表中找到对这些问题的描述和解决方式。我们需要注意的是，现在每个线程调用lock方法后都被排队了。只有队列中的第一个线程可以获得FairLock对象的锁。其他线程都将等待直到它成为了队列中的第一个线程。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FairLock</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span>           isLocked       = <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">private</span> Thread            lockingThread  = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">private</span> List&lt;QueueObject&gt; waitingThreads =</span><br><span class="line">            <span class="keyword">new</span> ArrayList&lt;QueueObject&gt;();</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    QueueObject queueObject           = <span class="keyword">new</span> QueueObject();</span><br><span class="line">    <span class="keyword">boolean</span>     isLockedForThisThread = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">        waitingThreads.add(queueObject);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(isLockedForThisThread)&#123;</span><br><span class="line">      <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">        isLockedForThisThread =</span><br><span class="line">            isLocked || waitingThreads.get(<span class="number">0</span>) != queueObject;</span><br><span class="line">        <span class="keyword">if</span>(!isLockedForThisThread)&#123;</span><br><span class="line">          isLocked = <span class="keyword">true</span>;</span><br><span class="line">           waitingThreads.remove(queueObject);</span><br><span class="line">           lockingThread = Thread.currentThread();</span><br><span class="line">           <span class="keyword">return</span>;</span><br><span class="line">         &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">try</span>&#123;</span><br><span class="line">        queueObject.doWait();</span><br><span class="line">      &#125;<span class="keyword">catch</span>(InterruptedException e)&#123;</span><br><span class="line">        <span class="keyword">synchronized</span>(<span class="keyword">this</span>) &#123; waitingThreads.remove(queueObject); &#125;</span><br><span class="line">        <span class="keyword">throw</span> e;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">this</span>.lockingThread != Thread.currentThread())&#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException(</span><br><span class="line">        <span class="string">"Calling thread has not locked this lock"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked      = <span class="keyword">false</span>;</span><br><span class="line">    lockingThread = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span>(waitingThreads.size() &gt; <span class="number">0</span>)&#123;</span><br><span class="line">      waitingThreads.get(<span class="number">0</span>).doNotify();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QueueObject</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span> isNotified = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">doWait</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(!isNotified)&#123;</span><br><span class="line">        <span class="keyword">this</span>.wait();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">this</span>.isNotified = <span class="keyword">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">doNotify</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.isNotified = <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">this</span>.notify();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">equals</span><span class="params">(Object o)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span> == o;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里你可以看到lock方法不再是synchronized的了。只有当方法中某段代码需要同步时才用到同步块。</p>
+<p>FairLock类会给每个调用lock方法的线程创建一个QueueObject对象，当线程调用unlock方法时队列中的第一个。<br>QueueObject出列并且调用doNotify方法激活对应的线程。这种方式可以保证只有一个线程被唤醒而不是所有等待线程。</p>
+<p>注意到FairLock在同步块中设置了状态检测来避免失控。</p>
+<p>QueueObject实际上就是一个信号量(semaphore),QueueObject对象内部保存了一个信号isNotified.这样做是为了防止信号丢失。queueObject.wait方法是被放在了synchronized(this)块的外部来避免嵌套监视器闭环。这样当没有线程运行lock方法中的synchronized同步块时其他线程可以调用unlock方法。</p>
+<p>最后我们注意到lock方法用到了try-catch块，这样当发生InterruptedException时线程将退出lock方法，这个时候我们应该将对应的QueueObject对象出列。<br><br></p>
+<h4 id="关于运行效率的考虑">关于运行效率的考虑</h4><p>如果你比较Lock类和FairLock类会发现FairLock类中lock方法和unlock方法的执行逻辑比Lock中复杂一些，这也使得FairLock的执行效率相比Lock类要低一些。它对你的应用程序的影响取决于FairLock所保证的临界区代码的执行时间，这个时间越长，那么影响就越小；同时也取决于这段临界区代码的执行频率。</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/05/04/译-java多线程与同步机制系列(16)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/05/04/译-java多线程与同步机制系列(16)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
       <a href="/2015/05/03/译-java多线程与同步机制系列(15)/" title="[译]java多线程与同步机制系列(15)--死锁预防" itemprop="url">[译]java多线程与同步机制系列(15)--死锁预防</a>
   </h1>
   <p class="article-author">By
@@ -862,72 +957,6 @@ Thread <span class="number">2</span> inserts <span class="keyword">record</span>
 
 
 
-   
-    
-    <article class="post-expand post" itemprop="articleBody"> 
-        <header class="article-info clearfix">
-  <h1 itemprop="name">
-    
-      <a href="/2015/04/25/译-java多线程与同步机制系列(6)/" title="[译]java多线程与同步机制系列(6)--竞争与临界区" itemprop="url">[译]java多线程与同步机制系列(6)--竞争与临界区</a>
-  </h1>
-  <p class="article-author">By
-       
-		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
-		
-  <p class="article-time">
-    <time datetime="2015-04-25T12:47:52.000Z" itemprop="datePublished"> 发表于 2015-04-25</time>
-    
-  </p>
-</header>
-    <div class="article-content">
-        
-        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/race-conditions-and-critical-sections.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/race-conditions-and-critical-sections.html</a>)</p>
-<p>多线程程序会出现的问题不是由因为某个单独的线程造成的，而是由于两个或多个线程需要对共享数据进行操作。这些共享资源包括共享内存，数据库或者文件。问题发生的具体原因是当多个线程对这些资源做出改变，而如果仅仅是读取但不改变这些数据的话不会发生任何问题。</p>
-<p>下面就是一个由于多线程对资源竞争而导可能致程序运行失败的例子：</p>
-<figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Counter</span> </span>&#123;</span><br><span class="line">     <span class="keyword">protected</span> <span class="keyword">long</span> <span class="keyword">count</span> = <span class="number">0</span>;</span><br><span class="line">     <span class="keyword">public</span> <span class="keyword">void</span> add(<span class="keyword">long</span> value)&#123;</span><br><span class="line">         <span class="keyword">this</span>.<span class="keyword">count</span> = <span class="keyword">this</span>.<span class="keyword">count</span> + value;</span><br><span class="line">     &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
-<p>想象一下如果有两个线程，线程A和线程B。如果两个线程都执行add方法的话，由于我们不知道操作系统是怎么控制调度这两个线程执行的，加上这个方法在java虚拟机运行时不是原子操作，而是像下面这样分三步执行：</p>
-<figure class="highlight oxygene"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">get this.count <span class="keyword">from</span> memory <span class="keyword">into</span> <span class="keyword">register</span></span><br><span class="line"><span class="keyword">add</span> value <span class="keyword">to</span> <span class="keyword">register</span></span><br><span class="line"><span class="keyword">write</span> <span class="keyword">register</span> <span class="keyword">to</span> memory</span><br></pre></td></tr></table></figure>
-<p>如果线程A和线程B同时执行这个方法的话，那么它们可能像下面这样交替执行：</p>
-<figure class="highlight applescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">this.<span class="command">count</span> = <span class="number">0</span>;</span><br><span class="line"> A:  reads this.<span class="command">count</span> <span class="keyword">into</span> a register (<span class="number">0</span>)</span><br><span class="line"> B:  reads this.<span class="command">count</span> <span class="keyword">into</span> a register (<span class="number">0</span>)</span><br><span class="line"> B:  adds value <span class="number">2</span> <span class="keyword">to</span> register</span><br><span class="line"> B:  writes register value (<span class="number">2</span>) <span class="keyword">back</span> <span class="keyword">to</span> memory. this.<span class="command">count</span> now <span class="keyword">equals</span> <span class="number">2</span></span><br><span class="line"> A:  adds value <span class="number">3</span> <span class="keyword">to</span> register</span><br><span class="line"> A:  writes register value (<span class="number">3</span>) <span class="keyword">back</span> <span class="keyword">to</span> memory. this.<span class="command">count</span> now <span class="keyword">equals</span> <span class="number">3</span></span><br></pre></td></tr></table></figure>
-<p>两个线程分别对count变量加2和加3，两个线程结束后正常的结果应该是5，但是两个线程的执行是相互交替的，两个线程从内存中将count初始值读到各自的寄存器中，然后各自对寄存器中得count值进行加2和加3操作，然后都将值写到内存中，结果可想而知，count的新值将由最后一个写入count新值的线程决定，但可以确定的是count值最后绝对不是5.所以如果不采取适当的同步机制的话，我们不会得到一个确定的count新值。<br><br><br>两个或多个线程同时对共享资源发出操作请求就叫做竞争，而导致竞争的那一段代码段就叫做临界区，在上述例子中，add方法体就是一个临界区，它导致了竞争。竞争可以通过在临界区采取适当的同步机制来避免。</p>
-
-        
-        
-        <p class="article-more-link">
-          
-       </p>
-    </div>
-    <footer class="article-footer clearfix">
-<div class="article-catetags">
-
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
-</div>
-
-
-</div>
-
-
-
-
-<div class="comments-count">
-	
-	  	<span></span>
-		<a href="/2015/04/25/译-java多线程与同步机制系列(6)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/25/译-java多线程与同步机制系列(6)/" data-count-type="comments">&nbsp;</a>
-	
-</div>
-
-</footer>
-
-
-    </article>
-
-
-
-
-
-
 
   <nav id="page-nav" class="clearfix">
     <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">Next<span></span></a>
@@ -943,7 +972,7 @@ Thread <span class="number">2</span> inserts <span class="keyword">record</span>
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
   </div>
 
 
@@ -953,7 +982,7 @@ Thread <span class="number">2</span> inserts <span class="keyword">record</span>
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>15</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>16</sup></a></li>
 		  
 		
 		  
