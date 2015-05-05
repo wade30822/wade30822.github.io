@@ -1,0 +1,449 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>[译]java多线程与同步机制系列(17)--嵌套管程锁死 | 朱家骅的Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="朱家骅">
+    
+
+    
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/nested-monitor-lockout.html)
+嵌套管程锁死的起因嵌套管程锁死的情况和死锁非常类似，下面是一个嵌套管程锁死的例子：
+123456789101112131415Thread 1 synchronizes on AThread 1 synchronizes on B (whil">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]java多线程与同步机制系列(17)--嵌套管程锁死">
+<meta property="og:url" content="http://yoursite.com/2015/05/05/译-java多线程与同步机制系列(17)/index.html">
+<meta property="og:site_name" content="朱家骅的Blog">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/nested-monitor-lockout.html)
+嵌套管程锁死的起因嵌套管程锁死的情况和死锁非常类似，下面是一个嵌套管程锁死的例子：
+123456789101112131415Thread 1 synchronizes on AThread 1 synchronizes on B (whil">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(17)--嵌套管程锁死">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/nested-monitor-lockout.html)
+嵌套管程锁死的起因嵌套管程锁死的情况和死锁非常类似，下面是一个嵌套管程锁死的例子：
+123456789101112131415Thread 1 synchronizes on AThread 1 synchronizes on B (whil">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="朱家骅的Blog">朱家骅的Blog</a></h1>
+				<h2 class="blog-motto">把流行的技术挂在嘴边，不如把过时的技术记在心里</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/categories">分类</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:yoursite.com">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/05/05/译-java多线程与同步机制系列(17)/" title="[译]java多线程与同步机制系列(17)--嵌套管程锁死" itemprop="url">[译]java多线程与同步机制系列(17)--嵌套管程锁死</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-05T00:27:58.000Z" itemprop="datePublished"> 发表于 2015-05-05</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#嵌套管程锁死的起因"><span class="toc-number">1.</span> <span class="toc-text">嵌套管程锁死的起因</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#更加现实的例子"><span class="toc-number">2.</span> <span class="toc-text">更加现实的例子</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#嵌套管程锁死_VS_死锁"><span class="toc-number">3.</span> <span class="toc-text">嵌套管程锁死 VS 死锁</span></a></li></ol>
+		
+		</div>
+		
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/nested-monitor-lockout.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/nested-monitor-lockout.html</a>)</p>
+<h3 id="嵌套管程锁死的起因">嵌套管程锁死的起因</h3><p>嵌套管程锁死的情况和死锁非常类似，下面是一个嵌套管程锁死的例子：</p>
+<figure class="highlight livecodeserver"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Thread <span class="number">1</span> synchronizes <span class="command"><span class="keyword">on</span> <span class="title">A</span></span></span><br><span class="line">Thread <span class="number">1</span> synchronizes <span class="command"><span class="keyword">on</span> <span class="title">B</span> (<span class="title">while</span> <span class="title">synchronized</span> <span class="title">on</span> <span class="title">A</span>)</span></span><br><span class="line">Thread <span class="number">1</span> decides <span class="built_in">to</span> <span class="built_in">wait</span> <span class="keyword">for</span> <span class="operator">a</span> signal <span class="built_in">from</span> another thread <span class="keyword">before</span> continuing</span><br><span class="line">Thread <span class="number">1</span> calls B.<span class="built_in">wait</span>() thereby releasing <span class="operator">the</span> lock <span class="command"><span class="keyword">on</span> <span class="title">B</span>, <span class="title">but</span> <span class="title">not</span> <span class="title">A</span>.</span></span><br><span class="line"></span><br><span class="line">Thread <span class="number">2</span> needs <span class="built_in">to</span> lock both A <span class="operator">and</span> B (<span class="operator">in</span> that sequence)</span><br><span class="line">        <span class="built_in">to</span> <span class="built_in">send</span> Thread <span class="number">1</span> <span class="operator">the</span> signal.</span><br><span class="line">Thread <span class="number">2</span> cannot lock A, since Thread <span class="number">1</span> still holds <span class="operator">the</span> lock <span class="command"><span class="keyword">on</span> <span class="title">A</span>.</span></span><br><span class="line">Thread <span class="number">2</span> remain blocked indefinately waiting <span class="keyword">for</span> Thread1</span><br><span class="line">        <span class="built_in">to</span> release <span class="operator">the</span> lock <span class="command"><span class="keyword">on</span> <span class="title">A</span></span></span><br><span class="line"></span><br><span class="line">Thread <span class="number">1</span> remain blocked indefinately waiting <span class="keyword">for</span> <span class="operator">the</span> signal <span class="built_in">from</span></span><br><span class="line">        Thread <span class="number">2</span>, thereby</span><br><span class="line">        never releasing <span class="operator">the</span> lock <span class="command"><span class="keyword">on</span> <span class="title">A</span>, <span class="title">that</span> <span class="title">must</span> <span class="title">be</span> <span class="title">released</span> <span class="title">to</span> <span class="title">make</span></span></span><br><span class="line">        <span class="keyword">it</span> possible <span class="keyword">for</span> Thread <span class="number">2</span> <span class="built_in">to</span> <span class="built_in">send</span> <span class="operator">the</span> signal <span class="built_in">to</span> Thread <span class="number">1</span>, etc.</span><br></pre></td></tr></table></figure>
+<p>这可能看上去像一个空想的场景，但是看看下面这个Lock类你就明白了：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//lock implementation with nested monitor lockout problem</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line">  <span class="keyword">protected</span> MonitorObject monitorObject = <span class="keyword">new</span> MonitorObject();</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">      <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">        <span class="keyword">synchronized</span>(<span class="keyword">this</span>.monitorObject)&#123;</span><br><span class="line">            <span class="keyword">this</span>.monitorObject.wait();</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      isLocked = <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">      <span class="keyword">this</span>.isLocked = <span class="keyword">false</span>;</span><br><span class="line">      <span class="keyword">synchronized</span>(<span class="keyword">this</span>.monitorObject)&#123;</span><br><span class="line">        <span class="keyword">this</span>.monitorObject.notify();</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意到lock方法中先对this上锁，随后对monitorObject上锁，如果isLocked为false的话这种设计没有一点问题，因为线程不会调用monitorObject.wait方法，但是一旦isLocked为true，那么该线程就会调用monitorObjecy.wait方法进入等待。那么问题来了，monitorObject.wait方法的调用只会释放对monitorObject对象的锁，它并没有释放对this也就是lock对象的锁。换句话说，进入等待状态的线程依然持有this对象的锁没有释放。</p>
+<p>当一个已经对Lock上锁的线程尝试unlock时，它将在进入unlock方法的synchronized(this)代码块时被阻塞并将一直等待直到lock方法中的等待线程离开synchronized(this)代码块。但是lock方法中的等待线程只有当isLocked为false时才会离开synchronized代码块，而这个操作需要在unlock方法中完成。</p>
+<p>简而言之就是说，lock方法中的等待线程需要某个线程执行unlock方法才能使等待线程退出lock方法，但是没有任何线程可以在等待线程退出lock方法前执行unlock方法。</p>
+<p>这种情况的结果是任何线程调用lock方法或者unlock方法都将进入无限期的等待状态，这就叫做嵌套管程锁死。<br><br></p>
+<h3 id="更加现实的例子">更加现实的例子</h3><p>你可能会说你绝对不会写出像上面一样的Lock类的，你绝不会在监视器上调用wait方法或者notify方法而是在This对象上调用。但是有些情况下就需要与上面Lock类类似的锁，比如说你想实现一个公平锁，你需要每个线程在对应的QueueObject对象上调用wait方法，这样你才能一次notify一个线程。</p>
+<p>下面我们来看看一个公平锁的实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//Fair Lock implementation with nested monitor lockout problem</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FairLock</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span>           isLocked       = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">private</span> Thread            lockingThread  = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">private</span> List&lt;QueueObject&gt; waitingThreads =</span><br><span class="line">            <span class="keyword">new</span> ArrayList&lt;QueueObject&gt;();</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    QueueObject queueObject = <span class="keyword">new</span> QueueObject();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">      waitingThreads.add(queueObject);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">while</span>(isLocked || waitingThreads.get(<span class="number">0</span>) != queueObject)&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">synchronized</span>(queueObject)&#123;</span><br><span class="line">          <span class="keyword">try</span>&#123;</span><br><span class="line">            queueObject.wait();</span><br><span class="line">          &#125;<span class="keyword">catch</span>(InterruptedException e)&#123;</span><br><span class="line">            waitingThreads.remove(queueObject);</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      waitingThreads.remove(queueObject);</span><br><span class="line">      isLocked = <span class="keyword">true</span>;</span><br><span class="line">      lockingThread = Thread.currentThread();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">this</span>.lockingThread != Thread.currentThread())&#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException(</span><br><span class="line">        <span class="string">"Calling thread has not locked this lock"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked      = <span class="keyword">false</span>;</span><br><span class="line">    lockingThread = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span>(waitingThreads.size() &gt; <span class="number">0</span>)&#123;</span><br><span class="line">      QueueObject queueObject = waitingThread.get(<span class="number">0</span>);</span><br><span class="line">      <span class="keyword">synchronized</span>(queueObject)&#123;</span><br><span class="line">        queueObject.notify();</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight actionscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QueueObject</span> </span>&#123;&#125;</span><br></pre></td></tr></table></figure>
+<p>第一眼看上去这个FairLock没有什么问题，但是仔细检查的话你会发现lock方法中是在两个嵌套的同步块内部调用的queueObject.wait方法的。一个是this同步块，另外一个是queueObject同步块。当一个线程调用queueObject.wait方法时它释放了queueObject对象的锁，但是没有释放this对象的锁。</p>
+<p>同时我们也注意到，unlock方法是有synchronized关键字修饰的，这也就相当于一个synchronized(this)代码块。这样如果一个线程在lock方法中进入等待状态的话，那么它将持有this对象的锁，那么其他所有调用unlock方法的线程都将被无限期的阻塞直到等待线程释放this对象的锁，我们都知道这是不可能发生的，因为要想发生，就必须有一个线程发送信号给等待线程，而这个发送操作必须在unlock方法中进行。</p>
+<p>所以，上述的FairLock类将导致嵌套管程锁死。关于公平锁的另一个更好的实现在将饥饿与公平的时候已经提到，感兴趣的可以前往那篇博客查看。<br><br></p>
+<h3 id="嵌套管程锁死_VS_死锁">嵌套管程锁死 VS 死锁</h3><p>嵌套管程锁死的结果和死锁非常类似：线程都将因对方而陷入无限期的等待状态。</p>
+<p>但是这两种情况也不是完全一样，我们之前提到，死锁发生在多个线程以不同的顺序获取锁的情形，比如线程1持有A对象的锁，尝试获取B对象的锁，线程2持有B对象的锁，尝试获取A对象的锁。我们在死锁预防章节中提到过我们可以确保线程获取锁的顺序来防止死锁。然而，嵌套管程锁死就是发生在线程以固定顺序获取锁的情形。线程1持有对象A和B的锁，现在它释放B的锁然后等待线程2给它发信号，而线程2需要对象A和B的锁才能给线程1发信号，所以现在就成了一个线程在等待信号，另一个线程在等待锁被释放的锁死情形。</p>
+<p>嵌套管程锁死和死锁的区别总结如下：</p>
+<figure class="highlight livecodeserver"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">In deadlock, <span class="constant">two</span> threads are waiting <span class="keyword">for</span> <span class="keyword">each</span> other <span class="built_in">to</span> release locks.</span><br><span class="line"></span><br><span class="line">In nested monitor lockout, Thread <span class="number">1</span> is holding <span class="operator">a</span> lock A, <span class="operator">and</span> waits</span><br><span class="line"><span class="keyword">for</span> <span class="operator">a</span> signal <span class="built_in">from</span> Thread <span class="number">2.</span> Thread <span class="number">2</span> needs <span class="operator">the</span> lock A <span class="built_in">to</span> <span class="built_in">send</span> <span class="operator">the</span></span><br><span class="line">signal <span class="built_in">to</span> Thread <span class="number">1.</span></span><br></pre></td></tr></table></figure>  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://yoursite.com/2015/05/05/译-java多线程与同步机制系列(17)/" data-title="[译]java多线程与同步机制系列(17)--嵌套管程锁死 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/05/04/译-java多线程与同步机制系列(16)/"  title="[译]java多线程与同步机制系列(16)--饥饿与公平">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制系列(16)--饥饿与公平
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/05/05/译-java多线程与同步机制系列(17)/" data-title="[译]java多线程与同步机制系列(17)--嵌套管程锁死" data-url="http://yoursite.com/2015/05/05/译-java多线程与同步机制系列(17)/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#嵌套管程锁死的起因"><span class="toc-number">1.</span> <span class="toc-text">嵌套管程锁死的起因</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#更加现实的例子"><span class="toc-number">2.</span> <span class="toc-text">更加现实的例子</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#嵌套管程锁死_VS_死锁"><span class="toc-number">3.</span> <span class="toc-text">嵌套管程锁死 VS 死锁</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">归档</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+  </div>
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>17</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://www.csdn.net" target="_blank" title="CSDN">CSDN</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1685825420&verifier=f33b37d3&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> 大家好，我是朱家骅。 <br/>
+			欢迎来到我的技术博客！！！</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1685825420" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<a href="mailto:317560406@qq.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="朱家骅">朱家骅</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"flash03"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
