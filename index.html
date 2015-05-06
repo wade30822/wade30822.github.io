@@ -77,6 +77,164 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
+      <a href="/2015/05/06/译-java多线程与同步机制系列(18)/" title="[译]java多线程与同步机制系列(18)--Slipped Conditions" itemprop="url">[译]java多线程与同步机制系列(18)--Slipped Conditions</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-06T00:25:58.000Z" itemprop="datePublished"> 发表于 2015-05-06</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/slipped-conditions.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/slipped-conditions.html</a>)</p>
+<p>Slipped Conditions就是线程在执行操作前需要检查一个状态值，但是这个状态值却被其他线程修改而导致该线程执行出错。下面是一个简单的例子：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span>&#123;</span><br><span class="line">      <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">        <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">          <span class="keyword">try</span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.wait();</span><br><span class="line">          &#125; <span class="keyword">catch</span>(InterruptedException e)&#123;</span><br><span class="line">            <span class="comment">//do nothing, keep waiting</span></span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">        isLocked = <span class="keyword">true</span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">      isLocked = <span class="keyword">false</span>;</span><br><span class="line">      <span class="keyword">this</span>.notify();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>lock方法有两个同步块，第一个同步块的退出条件为isLocked为false，第二个同步块是通过将isLocked设置为true来防止其他线程获取当前Lock对象的锁。</p>
+<p>想象一下如果isLocked为false，两个线程同时调用lock方法，当线程1进入同步块中，它检查isLocked的值为false，这样它便退出同步块，这样线程2开始进入同步块，此时isLocked的值同样为false，线程2退出同步块。这样两个线程都将都将进入第二个同步块，将isLocked设置为true。</p>
+<p>这种情况就叫做slipped conditions。所有的线程都检查一个状态值，然后退出同步块在当前线程没有修改状态值之前让其他线程检查该状态值。换句话说就是状态从被线程检查到被线程修改期间已经被其他线程修改过了。</p>
+<p>为了避免slipped conditions，对状态的检查和设置必须对于执行该操作的线程来说是原子性的，这也就意味着其他线程无法在当前线程检查和设置状态期间访问该状态。</p>
+<p>解决方法很简单，就是把isLocked = true；这条语句放到第一个同步块中while循环之后即可。就像下面这样：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span>&#123;</span><br><span class="line">      <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">        <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">          <span class="keyword">try</span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.wait();</span><br><span class="line">          &#125; <span class="keyword">catch</span>(InterruptedException e)&#123;</span><br><span class="line">            <span class="comment">//do nothing, keep waiting</span></span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        isLocked = <span class="keyword">true</span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">      isLocked = <span class="keyword">false</span>;</span><br><span class="line">      <span class="keyword">this</span>.notify();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line">```	</span><br><span class="line">这样的话，对状态的检查和设置被放在同一个同步块中以确保其操作的原子性。</span><br><span class="line">&lt;br/&gt;</span><br><span class="line">###一个更加现实的例子</span><br><span class="line">你可能会说你绝对不会写出像上面一样的Lock类的，因此你会觉得slipped conditions看上去像一个理论上会发生的问题。当时上面的例子我们只是刻意让它变得简单来描述slipped conditions。</span><br><span class="line"></span><br><span class="line">一个更加现实的例子是实现公平锁。如果我们现在去看嵌套管程锁死那篇博文中公平锁的实现代码，当我们试图解决嵌套锁的问题时很容易又会遇到slipped conditions问题，下面就是嵌套管程锁死中的公平锁代码：</span><br></pre></td></tr></table></figure>
+<p>//Fair Lock implementation with nested monitor lockout problem</p>
+<p>public class FairLock {<br>  private boolean           isLocked       = false;<br>  private Thread            lockingThread  = null;<br>  private List<queueobject> waitingThreads =<br>            new ArrayList<queueobject>();</queueobject></queueobject></p>
+<p>  public void lock() throws InterruptedException{<br>    QueueObject queueObject = new QueueObject();</p>
+<pre><code><span class="keyword">synchronized</span>(<span class="keyword">this</span>){
+  waitingThreads.<span class="built_in">add</span>(queueObject);
+
+  <span class="keyword">while</span>(isLocked || waitingThreads.<span class="built_in">get</span>(<span class="number">0</span>) != queueObject){
+
+    <span class="keyword">synchronized</span>(queueObject){
+      <span class="keyword">try</span>{
+        queueObject.wait();
+      }<span class="keyword">catch</span>(InterruptedException e){
+        waitingThreads.remove(queueObject);
+        <span class="keyword">throw</span> e;
+      }
+    }
+  }
+  waitingThreads.remove(queueObject);
+  isLocked = <span class="keyword">true</span>;
+  lockingThread = Thread.currentThread();
+}
+</code></pre><p>  }</p>
+<p>  public synchronized void unlock(){<br>    if(this.lockingThread != Thread.currentThread()){<br>      throw new IllegalMonitorStateException(<br>        “Calling thread has not locked this lock”);<br>    }<br>    isLocked      = false;<br>    lockingThread = null;<br>    if(waitingThreads.size() &gt; 0){<br>      QueueObject queueObject = waitingThread.get(0);<br>      synchronized(queueObject){<br>        queueObject.notify();<br>      }<br>    }<br>  }<br>}<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+<p>public class QueueObject {}<br><figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">我们注意到queueObject.call方法在<span class="function"><span class="title">synchronized</span><span class="params">(queueObject)</span></span>同步块，而该同步块又嵌套在<span class="function"><span class="title">synchronized</span><span class="params">(this)</span></span>同步块中，为了解决嵌套管程死锁的问题，我们必须将<span class="function"><span class="title">synchronized</span><span class="params">(queueObject)</span></span>同步块移出到<span class="function"><span class="title">synchronized</span><span class="params">(this)</span></span>同步块之外。修改代码如下所示：</span><br></pre></td></tr></table></figure></p>
+<p>//Fair Lock implementation with slipped conditions problem</p>
+<p>public class FairLock {<br>  private boolean           isLocked       = false;<br>  private Thread            lockingThread  = null;<br>  private List<queueobject> waitingThreads =<br>            new ArrayList<queueobject>();</queueobject></queueobject></p>
+<p>  public void lock() throws InterruptedException{<br>    QueueObject queueObject = new QueueObject();</p>
+<pre><code><span class="keyword">synchronized</span>(<span class="keyword">this</span>){
+  waitingThreads.<span class="built_in">add</span>(queueObject);
+}
+
+<span class="built_in">boolean</span> mustWait = <span class="keyword">true</span>;
+<span class="keyword">while</span>(mustWait){
+
+  <span class="keyword">synchronized</span>(<span class="keyword">this</span>){
+    mustWait = isLocked || waitingThreads.<span class="built_in">get</span>(<span class="number">0</span>) != queueObject;
+  }
+
+  <span class="keyword">synchronized</span>(queueObject){
+    <span class="keyword">if</span>(mustWait){
+      <span class="keyword">try</span>{
+        queueObject.wait();
+      }<span class="keyword">catch</span>(InterruptedException e){
+        waitingThreads.remove(queueObject);
+        <span class="keyword">throw</span> e;
+      }
+    }
+  }
+}
+
+<span class="keyword">synchronized</span>(<span class="keyword">this</span>){
+  waitingThreads.remove(queueObject);
+  isLocked = <span class="keyword">true</span>;
+  lockingThread = Thread.currentThread();
+}
+</code></pre><p>  }<br>}<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">上面我只写了<span class="operator"><span class="keyword">lock</span>方法，因为我只改写了<span class="keyword">lock</span>方法。</span><br><span class="line"></span><br><span class="line">注意到<span class="keyword">lock</span>方法包含了四个同步块，我们关注第二到第四个同步块。</span><br><span class="line"></span><br><span class="line">第二个同步块通过mustWait = isLocked || waitingThreads.<span class="keyword">get</span>(<span class="number">0</span>) != queueObject;</span>设置状态。</span><br><span class="line"></span><br><span class="line">第三个同步块检查线程是否需要等待。当然可能当前会有其他线程已经对该<span class="operator"><span class="keyword">Lock</span>对象解锁，我们姑且不去考虑。我们假设当线程<span class="number">1</span>对<span class="keyword">Lock</span>对象解锁的话，它将立即退出synchronized(queueObject)同步块。</span><br><span class="line"></span><br><span class="line">第四个同步块只有当mustWait为<span class="literal">false</span>时才会执行，它将isLocked设置为<span class="literal">true</span>，然后退出同步块，最后退出<span class="keyword">lock</span>方法。</span><br><span class="line"></span><br><span class="line">想象一下如果两个线程同时调用<span class="keyword">lock</span>方法，线程<span class="number">1</span>将检查isLocked变量，此时该变量为<span class="literal">false</span>，线程<span class="number">2</span>同样检查isLocked变量，那么两个线程都不会进入等待状态，它们都会将isLocked设置为<span class="literal">true</span>。这就造成了slipped conditions。</span><br><span class="line">&lt;br/&gt;</span><br><span class="line">###解决Slipped Conditions问题</span><br><span class="line">为了解决slipped conditions问题，我们需要将最后一个同步块的内容添加到第二个同步块中去，为了适应这个改动，整体的代码也会做些许的变动。修改后代码如下所示：</span></span><br></pre></td></tr></table></figure></p>
+<p>//Fair Lock implementation without nested monitor lockout problem,<br>//but with missed signals problem.</p>
+<p>public class FairLock {<br>  private boolean           isLocked       = false;<br>  private Thread            lockingThread  = null;<br>  private List<queueobject> waitingThreads =<br>            new ArrayList<queueobject>();</queueobject></queueobject></p>
+<p>  public void lock() throws InterruptedException{<br>    QueueObject queueObject = new QueueObject();</p>
+<pre><code><span class="keyword">synchronized</span>(<span class="keyword">this</span>){
+  waitingThreads.<span class="built_in">add</span>(queueObject);
+}
+
+<span class="built_in">boolean</span> mustWait = <span class="keyword">true</span>;
+<span class="keyword">while</span>(mustWait){
+
+
+      <span class="keyword">synchronized</span>(<span class="keyword">this</span>){
+      mustWait = isLocked || waitingThreads.<span class="built_in">get</span>(<span class="number">0</span>) != queueObject;
+      <span class="keyword">if</span>(!mustWait){
+      waitingThreads.remove(queueObject);
+      isLocked = <span class="keyword">true</span>;
+      lockingThread = Thread.currentThread();
+      <span class="keyword">return</span>;
+      }
+      }     
+
+  <span class="keyword">synchronized</span>(queueObject){
+    <span class="keyword">if</span>(mustWait){
+      <span class="keyword">try</span>{
+        queueObject.wait();
+      }<span class="keyword">catch</span>(InterruptedException e){
+        waitingThreads.remove(queueObject);
+        <span class="keyword">throw</span> e;
+      }
+    }
+  }
+}
+</code></pre><p>  }<br>}<br>```<br>修改后的代码中，mustWait的检查和设置被放在了同一个同步块中，即使mustWait在while(mustWait)中被检查并且这个while循环没有在同步块中，但是这不会构成问题，因为mustWait的值没有被修改。如果一个线程检查mustWait为false时，该线程将isLocked设置为true，这样其他线程将会进入等待状态。</p>
+<p>synchronized(this)中的return语句不是必须的，这只是一个很小的优化。如果mustWait为false，那么该线程就没有必须继续执行while循环然后进入synchronized(queueObject)代码块的必要了。</p>
+<p>细心的读者可能会发现上面的程序会发生丢失信号的问题。想象一下线程1已经获得了Lock对象的锁，现在线程2调用lock方法尝试获取锁，现在它会在第一个synchronized(this)同步块上阻塞。这是如果线程1调用unlock方法的话，注意unlock方法有个queueObject.notify()方法，但是我们注意到此时的queueObject还没有调用wait方法，那么这个信号就丢失了。当线程2最终调用了wait方法后将一直等待直到其他线程调用unlock方法，但是有可能不会有其他线程调用unlock方法了。</p>
+<p>丢失信号问题的解决方式就是在饥饿与公平中提到的将QueueObject变成一个信号量并提供两个方法：doWait和doNotify方法。这些方法在QueueObject内部保存了信号。这样即使doNotify方法在doWait方法之前执行也不会丢失信号。</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/05/06/译-java多线程与同步机制系列(18)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/05/06/译-java多线程与同步机制系列(18)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
       <a href="/2015/05/05/译-java多线程与同步机制系列(17)/" title="[译]java多线程与同步机制系列(17)--嵌套管程锁死" itemprop="url">[译]java多线程与同步机制系列(17)--嵌套管程锁死</a>
   </h1>
   <p class="article-author">By
@@ -877,75 +1035,6 @@
 
 
 
-   
-    
-    <article class="post-expand post" itemprop="articleBody"> 
-        <header class="article-info clearfix">
-  <h1 itemprop="name">
-    
-      <a href="/2015/04/26/译-java多线程与同步机制系列(8)/" title="[译]java多线程与同步机制系列(8)--线程安全与不变性" itemprop="url">[译]java多线程与同步机制系列(8)--线程安全与不变性</a>
-  </h1>
-  <p class="article-author">By
-       
-		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
-		
-  <p class="article-time">
-    <time datetime="2015-04-26T12:20:03.000Z" itemprop="datePublished"> 发表于 2015-04-26</time>
-    
-  </p>
-</header>
-    <div class="article-content">
-        
-        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/thread-safety-and-immutability.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/thread-safety-and-immutability.html</a>)</p>
-<p>竞争只发生在多个线程对共享数据执行写操作的时候，如果仅仅是读数据的话不会发生竞争。我们可以通过将共享对象设计为不可变来让其能够被多个线程共享且数据不变，比如：</p>
-<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ImmutableValue</span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> <span class="keyword">value</span> = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">ImmutableValue</span><span class="params">(<span class="keyword">int</span> <span class="keyword">value</span>)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.<span class="keyword">value</span> = <span class="keyword">value</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.<span class="keyword">value</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>从代码中我们可以看到，ImmutableValue的值由构造函数传入的value决定，同时也注意到这个类没有setter。这就意味着一旦一个ImmutableVa对象构建完成之后，你就无法改变value的值。你能做的仅仅是通过getValue方法获取value的值。</p>
-<p>如果你需要操作这个ImmutableValue对象的值的话，你可以在操作方法中返回一个新值而保持旧的value值不变，如下所示：</p>
-<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ImmutableValue</span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> <span class="keyword">value</span> = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">ImmutableValue</span><span class="params">(<span class="keyword">int</span> <span class="keyword">value</span>)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.<span class="keyword">value</span> = <span class="keyword">value</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.<span class="keyword">value</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  </span><br><span class="line">      <span class="function"><span class="keyword">public</span> ImmutableValue <span class="title">add</span><span class="params">(<span class="keyword">int</span> valueToAdd)</span></span>&#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">new</span> ImmutableValue(<span class="keyword">this</span>.<span class="keyword">value</span> + valueToAdd);</span><br><span class="line">      &#125;</span><br><span class="line">  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>上面代码中的add方法是对value执行加操作，但是这里返回的是一个新的ImmutableValue对象，而原对象保持不变。</p>
-<h3 id="引用不一定线程安全的">引用不一定线程安全的</h3><p>我们需要注意的一点是即使对象是不变的或者说是线程安全的，但是对该对象的引用可能不是线程安全的，下面看一个例子：</p>
-<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">Calculator</span>&#123;</span><br><span class="line">  <span class="keyword">private</span> ImmutableValue currentValue = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> ImmutableValue <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> currentValue;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setValue</span><span class="params">(ImmutableValue newValue)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.currentValue = newValue;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">(<span class="keyword">int</span> newValue)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.currentValue = <span class="keyword">this</span>.currentValue.add(newValue);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>Calculator类有一个指向ImmutableValue对象的引用currentValue，从代码中我们可以看出，setValue方法和add方法都会改变currentValue这个引用。所以，虽然Calculator内部持有一个对不变对象的引用，可是它本身确是可变的即非线程安全的。换句话说就是，ImmutableValue对象是线程安全的，但是对它的使用却不是线程安全的。我们在试图通过不变性来保证线程安全时一定要注意这一点。</p>
-<p>如果想确保Calculator类是线程安全的话，那么就需要对getValue方法，setValue方法和add方法做同步处理(synchronized)，修改后代码如下：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Calculator</span></span>&#123;</span><br><span class="line">  <span class="keyword">private</span> ImmutableValue currentValue = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> ImmutableValue <span class="keyword">synchronized</span> <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> currentValue;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="keyword">synchronized</span> <span class="title">setValue</span><span class="params">(ImmutableValue newValue)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.currentValue = newValue;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="keyword">synchronized</span> <span class="title">add</span><span class="params">(<span class="keyword">int</span> newValue)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.currentValue = <span class="keyword">this</span>.currentValue.add(newValue);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-        
-        
-        <p class="article-more-link">
-          
-       </p>
-    </div>
-    <footer class="article-footer clearfix">
-<div class="article-catetags">
-
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
-</div>
-
-
-</div>
-
-
-
-
-<div class="comments-count">
-	
-	  	<span></span>
-		<a href="/2015/04/26/译-java多线程与同步机制系列(8)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/26/译-java多线程与同步机制系列(8)/" data-count-type="comments">&nbsp;</a>
-	
-</div>
-
-</footer>
-
-
-    </article>
-
-
-
-
-
-
 
   <nav id="page-nav" class="clearfix">
     <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">Next<span></span></a>
@@ -961,7 +1050,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
   </div>
 
 
@@ -971,7 +1060,7 @@
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>17</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>18</sup></a></li>
 		  
 		
 		  
