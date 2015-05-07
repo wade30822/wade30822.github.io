@@ -77,6 +77,95 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
+      <a href="/2015/05/07/译-java多线程与同步机制系列(19)/" title="[译]java多线程与同步机制系列(19)--java中的锁" itemprop="url">[译]java多线程与同步机制系列(19)--java中的锁</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-07T00:25:36.000Z" itemprop="datePublished"> 发表于 2015-05-07</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/locks.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/locks.html</a>)</p>
+<p>Java中的锁是一种和同步块类似的同步机制，不同的地方在于锁比同步块更加复杂。当然，锁也是由同步块来实现的，所以我们自始至终都离不开synchronized关键字。</p>
+<p>从java5开始，java.utl.concurrent.locks包中就包含了很多种锁的实现，所以你可能不需要自己手写一个锁，但是你需要知道怎么用这些官方提供的锁，同时也应该了解这些锁的运行原理。如果你想了解更多关于这些锁的信息，可以查看我得其他教程，链接如下：</p>
+<p>java.util.concurrent.locks.Lock interface教程(<a href="http://tutorials.jenkov.com/java-util-concurrent/lock.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-util-concurrent/lock.html</a>)<br><br></p>
+<h3 id="一个简单的锁实现">一个简单的锁实现</h3><p>首先我们来看一看java同步块的代码:</p>
+<figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Counter</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> <span class="keyword">count</span> = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">int</span> inc()&#123;</span><br><span class="line">    synchronized(<span class="keyword">this</span>)&#123;</span><br><span class="line">      <span class="keyword">return</span> ++<span class="keyword">count</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>inc方法中有一个synchronized(this)同步块，这个同步块保证只能有一个线程可以执行return ++count操作。同步块中的代码可以更复杂，但是这里++count足够表明我们的意思。</p>
+<p>Counter类也可以写成下面这种形式，这里我们使用Lock类而不是同步块：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">Counter</span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> Lock <span class="keyword">lock</span> = <span class="keyword">new</span> Lock();</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">inc</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">lock</span>.<span class="keyword">lock</span>();</span><br><span class="line">    <span class="keyword">int</span> newCount = ++count;</span><br><span class="line">    <span class="keyword">lock</span>.unlock();</span><br><span class="line">    <span class="keyword">return</span> newCount;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>lock方法将使当前线程获得Lock对象的锁，所以其他线程调用lock方法将被阻塞直到当前线程调用unlock方法释放锁。</p>
+<p>下面是一个Lock类的简单实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span><br><span class="line">  <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked = <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    isLocked = <span class="keyword">false</span>;</span><br><span class="line">    notify();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>lock方法中有一个while(isLocked)循环，也叫做自旋锁，关于自旋锁和wait，notify方法的相关知识我们在前面文章中都有描述，这里不再做过多阐述，当isLocked为true，那么调用lock方法的线程都将调用wait方法进入等待状态。为了防止等待线程在没有收到notify方法发送的信号而自动被唤醒(虚假唤醒)，我们在这里需要反复查看isLocked的状态来确保程序能正常执行。如果isLocked为false，那么线程将退出while循环，将isLocked设置为true，同时锁住Lock对象以阻塞其他线程。</p>
+<p>当线程执行完临界区的代码(临界区就是lock与unlock方法之间的代码)，线程调用unlock方法，此时isLocked为false，在该Lock对象上被阻塞的线程将被唤醒继续执行lock方法。<br><br></p>
+<h3 id="可重入锁">可重入锁</h3><p>java中的同步块是可重入的。意思是线程进入一个同步块中，那么它就获得了该同步块所作用的监视器对象的锁，那么这个线程就可以继续进入其他同样作用于该监视器对象的同步块中，如下所示:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Reentrant</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="title">outer</span><span class="params">()</span></span>&#123;</span><br><span class="line">    inner();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="title">inner</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>outer和inner方法都是同步方法，相当于两个synchronized(this)同步块。如果一个线程调用outer方法进入同步块中，随后继续调用inner方法的话是没有任何问题的，因为两个同步块都是对this对象起作用。总之，如果一个线程持有一个监视器对象的锁，那么它就可以进入所有作用于该监视器对象的同步块，这就叫做重入，线程可以重入所有作用于该线程所持有锁的对象的所有同步块。</p>
+<p>上面的Lock类不是可重入的，下面我们重写了一个Reentant类，那么使用这个类的话，outer()中调用inner()将会在inner()中lock.lock<br>()处阻塞。代码如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">public class Reentrant2&#123;</span><br><span class="line"></span><br><span class="line">  <span class="operator"><span class="keyword">Lock</span> <span class="keyword">lock</span> = new <span class="keyword">Lock</span>();</span></span><br><span class="line"></span><br><span class="line">  public outer()&#123;</span><br><span class="line">    <span class="operator"><span class="keyword">lock</span>.<span class="keyword">lock</span>();</span></span><br><span class="line">    inner();</span><br><span class="line">    <span class="operator"><span class="keyword">lock</span>.<span class="keyword">unlock</span>();</span></span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  public synchronized inner()&#123;</span><br><span class="line">    <span class="operator"><span class="keyword">lock</span>.<span class="keyword">lock</span>();</span></span><br><span class="line">    //<span class="operator"><span class="keyword">do</span> something</span><br><span class="line">    <span class="keyword">lock</span>.<span class="keyword">unlock</span>();</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>线程首先调用outer方法将获得Lock对象的锁，然后它调用inner方法。在inner方法中，该线程将再次尝试获取Lock对象的锁，这将会使线程阻塞，因为Lock对象的锁已经在outer方法中被该线程获取了。</p>
+<p>线程将阻塞的原因是我们没有在调用inner方法前调用lock.unlock()释放锁，当我们再次查看Lock类的源码就会发现问题所在了:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span><br><span class="line">  <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked = <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>while()循环中有一个条件判断是否线程被允许退出lock方法，只有当isLocked为false时才允许线程退出lock方法，在这里我们不会留意是哪个线程获得了该对象的锁，这就是问题所在了。</p>
+<p>为了使上面的Lock类可重入，我们需要做一些改动：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>;</span><br><span class="line">  Thread  lockedBy = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">int</span>     lockedCount = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span><br><span class="line">  <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    Thread callingThread = Thread.currentThread();</span><br><span class="line">    <span class="keyword">while</span>(isLocked &amp;&amp; lockedBy != callingThread)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked = <span class="keyword">true</span>;</span><br><span class="line">    lockedCount++;</span><br><span class="line">    lockedBy = callingThread;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(Thread.curentThread() == <span class="keyword">this</span>.lockedBy)&#123;</span><br><span class="line">      lockedCount--;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span>(lockedCount == <span class="number">0</span>)&#123;</span><br><span class="line">        isLocked = <span class="keyword">false</span>;</span><br><span class="line">        notify();</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>现在while循环也将考虑当前持有该对象的锁的线程。当isLocked为false或者当前线程就是持有该对象的锁的线程时，线程将不会等待而是继续执行最后退出lock方法。</p>
+<p>同时我们也需要记录该对象的锁被线程获取的次数，否则一次unlock就会释放该对象的锁，即使这个锁被获取了多次。我们希望的是线程调用了多少次lock方法上锁就需要调用多少次unlock来解锁。</p>
+<p>现在这个Lock类就是可重入的了。<br><br></p>
+<h3 id="公平锁">公平锁</h3><p>java的同步块没有确保线程获取锁的顺序。因此如果有多个线程同时竞争一个对象的锁的话，就有可能有一个或多个线程永远无法获取该对象的锁，这就是我们提过的饥饿。本文中的Lock类都是使用的同步块机制，所以它也无法保证公平性。为了保证公平性，我们可以到饥饿与公平那篇博客中去找到方法。<br><br></p>
+<h3 id="在finally代码块中调用unlock方法">在finally代码块中调用unlock方法</h3><p>当我们使用Lock类来守护临界区时，临界区可能会抛出异常，那么这个时候我们就非常有必要在finally代码块中调用unlock来释放对象的锁了，这样其他线程可以获取该对象的锁继续运行。下面是一个例子:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">lock</span>.<span class="keyword">lock</span>();</span></span><br><span class="line">try&#123;</span><br><span class="line">  //<span class="operator"><span class="keyword">do</span> critical <span class="keyword">section</span> code, which may throw <span class="keyword">exception</span></span><br><span class="line">&#125; finally &#123;</span><br><span class="line">  <span class="keyword">lock</span>.<span class="keyword">unlock</span>();</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个很简短的代码块保证了当临界区发生异常时Lock对象的锁能被及时释放。如果unlock方法不是在finally块中被调用，那么一旦发生异常，那么Lock对象将被永久锁定，其他线程将永远无法获得Lock对象的锁。</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/05/07/译-java多线程与同步机制系列(19)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/05/07/译-java多线程与同步机制系列(19)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
       <a href="/2015/05/06/译-java多线程与同步机制系列(18)/" title="[译]java多线程与同步机制系列(18)--Slipped Conditions" itemprop="url">[译]java多线程与同步机制系列(18)--Slipped Conditions</a>
   </h1>
   <p class="article-author">By
@@ -921,120 +1010,6 @@
 
 
 
-   
-    
-    <article class="post-expand post" itemprop="articleBody"> 
-        <header class="article-info clearfix">
-  <h1 itemprop="name">
-    
-      <a href="/2015/04/26/译-java多线程与同步机制系列(9)/" title="[译]java多线程与同步机制系列(9)--Java内存模型" itemprop="url">[译]java多线程与同步机制系列(9)--Java内存模型</a>
-  </h1>
-  <p class="article-author">By
-       
-		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
-		
-  <p class="article-time">
-    <time datetime="2015-04-26T13:42:29.000Z" itemprop="datePublished"> 发表于 2015-04-26</time>
-    
-  </p>
-</header>
-    <div class="article-content">
-        
-        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/java-memory-model.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/java-memory-model.html</a>)</p>
-<p>java内存模型详细阐述了java虚拟机在计算机内存(RAM)中的工作原理。java虚拟机可以算作是一个完整的计算机模型，所以它也具有自己的内存模型，也就是我们所说的java内存模型。</p>
-<p>如果你想设计一个行为良好的同步程序的话，java内存模型是必须掌握的知识。java内存模型阐述了不同线程如何获得其他线程对共享数据的修改，以及在必要时如何同步各个线程对共享数据的访问。</p>
-<p>java最初的内存模型是不完善了，所以java在1.5版本的时候对java内存模型做了大幅度的修改更新，这个新版本直到现在的java8都在使用。<br><br></p>
-<h3 id="java内存模型内部结构">java内存模型内部结构</h3><p>java虚拟机中的java内存模型将内存分为了线程栈和堆。下图展示了这种结构：</p>
-<p><img src="http://tutorials.jenkov.com/images/java-concurrency/java-memory-model-1.png" alt="java内存模型结构"></p>
-<p>在java虚拟机中每个线程都有自己的线程栈，线程栈包含了该线程当前正在执行的方法的信息，我更愿意把它叫做方法调用栈，随着线程的执行，线程栈的内容也在不断变化。</p>
-<p>线程栈中也包含了当前执行方法的本地变量，线程只能访问属于它自己的线程栈，所以由该线程创建的本地变量对其他线程是不可见的。即使两个线程在执行同一段代码，它们创建了相同名字的本地变量，但这个变量都保存在它们各自的线程中。</p>
-<p>所有基本类型的本地变量都是直接存储在线程栈中，因此这些本地变量在线程之间是不可见的。一个线程可以把一个基本类型本地变量的拷贝传给另一个线程使用，但是无法将其自身传给其他线程使用。(译者注：java中，基本数据类型是值传递，非基本类型是引用传递)</p>
-<p>堆中存放了java程序中创建的所有非基本类型对象(译者注：基本类型可以被封装成类对象，这个时候它就存放在堆中。比如int - 》 Integer)，不管对象是被创建然后将对象引用传给方法的本地变量，还是作为其他对象的成员变量，它都将存放在堆中。</p>
-<p>下图就是调用栈，线程栈中的本地变量以及堆中存放的对象示意图：</p>
-<p><img src="http://tutorials.jenkov.com/images/java-concurrency/java-memory-model-2.png" alt="调用栈，本地变量，堆"></p>
-<p>本地变量如果是一个基本数据类型的话，那么它就被存放在线程栈中。</p>
-<p>如果本地变量是一个对象引用。那么这个引用是存放在线程栈中，但是它所引用的对象是存放在堆中。</p>
-<p>一个对象可能会包含很多对象方法，这些方法中的本地变量都将被存放在线程栈中，即使这个方法所属的对象被存放在堆中。</p>
-<p>对象的成员变量都将随对象一起存放在堆中，不管这个成员变量是基本数据类型还是一个对其他对象的引用。</p>
-<p>静态类变量和类的其他信息都存放在堆中。</p>
-<p>堆中的对象可以被所有持有该对象引用的线程所访问。当一个线程访问对象时，它也能访问到对象的成员变量。如果两个线程同时调用同一个对象的同一个方法，那么这些线程都将可以访问到该对象的成员变量，但是两个线程都各自持有一份该方法本地变量的拷贝。下图是对这些要点的描述：</p>
-<p><img src="http://tutorials.jenkov.com/images/java-concurrency/java-memory-model-3.png" alt="变量存放位置及引用关系"></p>
-<p>两个线程都有很多本地变量，其中一个本地变量(local variable 2)指向了堆中同一个对象(object 3)即两个线程都持有了对同一的对象的不同引用。这些引用都是本地变量所以都存放在各自的线程栈中，即使它们都指向堆中同一个变量。</p>
-<p>同时我们注意到堆中的object3有两个引用成员变量分别引用obect2和object4，通过这些引用变量使得object3可以访问object2和object4.</p>
-<p>图中还有一个本地变量引用了不同的堆中对象，理论上如果两个线程都持有对object1和object5的引用的话，那么两个线程都能访问这两个object，但是图中每个线程只持有对其中一个object的引用。</p>
-<p>那么想要实现像上面这样的引用关系的话，代码该怎么写呢？</p>
-<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyRunnable</span> <span class="keyword">implements</span> <span class="title">Runnable</span>() </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        methodOne();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">methodOne</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> localVariable1 = <span class="number">45</span>;</span><br><span class="line"></span><br><span class="line">        MySharedObject localVariable2 =</span><br><span class="line">            MySharedObject.sharedInstance;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//... do more with local variables.</span></span><br><span class="line"></span><br><span class="line">        methodTwo();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="function"><span class="keyword">void</span> <span class="title">methodTwo</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        Integer localVariable1 = <span class="keyword">new</span> Integer(<span class="number">99</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//... do more with local variable.</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<figure class="highlight smali"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">public class MySharedObject &#123;</span><br><span class="line"></span><br><span class="line">    //static variable pointing to<span class="instruction"> instance </span>of MySharedObject</span><br><span class="line"></span><br><span class="line">   <span class="keyword"> public</span><span class="keyword"> static</span><span class="keyword"> final</span> MySharedObject sharedInstance =</span><br><span class="line">       <span class="instruction"> new </span>MySharedObject(<span class="function">)</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    //member variables pointing to two objects on the heap</span><br><span class="line"></span><br><span class="line">   <span class="keyword"> public</span> Integer object2 =<span class="instruction"> new </span>Integer(22<span class="function">)</span>;</span><br><span class="line">   <span class="keyword"> public</span> Integer object4 =<span class="instruction"> new </span>Integer(44<span class="function">)</span>;</span><br><span class="line"></span><br><span class="line">   <span class="keyword"> public</span><span class="instruction"> long </span>member1 = 12345;</span><br><span class="line">   <span class="keyword"> public</span><span class="instruction"> long </span>member1 = 67890;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>如果两个线程执行run方法的话就会出现上面的引用关系，从代码中我们可以看到run方法会调用methodOne方法，methodOne方法会调用methodTwo方法。</p>
-<p>methodOne声明了一个基本数据类型的本地变量(local variable 1)以及一个对象引用本地变量(local variable 2)。如果每个线程都调用methodOne方法的话，那么每个线程都会在各自线程栈中创建两个本地变量local variable1 和local variable 2，local variable1变量是基本数据类型的，所以对其他线程是不可见的。一个线程对local variable 1 的改变对其他线程没有影响。</p>
-<p>每个线程执行methodOne方法都会创建一个local variable 2 本地变量，但是每个线程的local variable 2 变量是引用堆中的同一个对象。原因是localVaribale2引用的是MySharedObect类的一个静态变量，意味着内存中只会有一个该对象。这个对象对应这上图中的object3.</p>
-<p>MySharedObject中有两个成员变量，这两个成员变量是Integer类型的，也就是说是非基本数据类型，所以和MySharedObejct对象一样存储在堆中。这两个Integer对象就对应着上图中的obeject2和object4.</p>
-<p>methodTwo方法中也有一个本地变量local variable 1，这个本地变量是一个对Integer对象的引用。该方法将创建一个Integer对象存放在堆中然后将引用传给localVariable1。但是每当这个方法被执行的时候都会创建一个新的Integer对象，所以每个线程执行methodTwo方法后localVariable1对象指向的是不同的Integer对象。这些Integer对象就对应上图中得object1和object5.</p>
-<p>MySharedObject类中还有两个long类型的成员变量，虽然它们是基本数据类型，但是由于它们又是成员变量，所以它们也和它们所属的对象一起存放在堆中。注意只有本地变量才被存放在线程栈中。<br><br></p>
-<h3 id="硬件存储架构">硬件存储架构</h3><p>现代硬件存储结构和java内存模型有很大的区别，了解硬件存储架构对于理解java内存模型如何在其基础上工作是非常重要的。这一节先讲通用的硬件存储架构，然后再将java内存模型在这个架构基础上是如何工作的。</p>
-<p>下图是现代计算机的硬件架构：</p>
-<p><img src="http://tutorials.jenkov.com/images/java-concurrency/java-memory-model-4.png" alt="现代计算机硬件架构"></p>
-<p>一台现代计算机一般有两个或多个CPU，每个CPU上可能有多个核，这就意味着可以有超过一个线程同时运行，每个CPU都可以运行一个线程。如果你的java程序是多线程的，那么在程序内部可以有多个线程同时运行。</p>
-<p>每个CPU都有许多寄存器，CPU操作寄存器的数据的速度比操作内存数据的速度快得多，因为CPU访问寄存器的速度比访问内存的速度快得多。</p>
-<p>每个CPU也可能拥有一个CPU缓存层。事实上，现代CPU都会有一个一定大小的缓存层。CPU访问缓存层的速度比访问内存的速度快，但是比访问寄存器的速度慢。有些CPU甚至有多个缓冲层(Lay1和Lay2)，当然，在这里我们不必了解java内存模型与这些缓冲层是怎么打交道的，我们只需要知道CPU也有自己的缓冲层存储数据。</p>
-<p>计算机也有主存(RAM)，这是我们最熟悉的。CPU可以访问主存，主存的的容量比CPU的缓存大多了。</p>
-<p>当CPU需要访问主存时，它一般将一部分主存的数据直接保存到它的缓存中，甚至会将一部分数据直接存到CPU的寄存器中，然后对这些数据执行操作。当CPU需要将结果回写到主存时，它首先把寄存器中对应的值回写到CPU缓存中，然后从缓存中将值回写到主存中。</p>
-<p>CPU一般会在需要缓存其他数据时从缓存中清除一部分数据并刷新内存中对应的数据。CPU缓存可以一次对部分缓存区域进行操作而没必要每次对整个缓存进行操作。一般来说，CPU从内存读取数据或从缓存中清除数据的最小单位叫做“缓存条“(cache lines)，CPU可以一次将一个或多个缓存条的数据读进缓存，也可以一次将一个或多个缓存条清除出缓存。<br><br></p>
-<h3 id="java内存模型与硬件存储模型结合">java内存模型与硬件存储模型结合</h3><p>前面我们已经提到，java内存模型与硬件存储模型有很大的区别。硬件存储模型不区分线程栈和堆。从硬件层面上看，线程栈和堆都存放在主存中。部分线程栈和堆有可能会被CPU加入到缓存中甚至是寄存器中。下图显示了java内存模型与硬件存储模型的联系：</p>
-<p><img src="http://tutorials.jenkov.com/images/java-concurrency/java-memory-model-5.png" alt="java内存模型与硬件存储模型"></p>
-<p>由于对象和变量可以存放在不同的存储区域，这样会带来很多问题，其中最主要的两个问题是：</p>
-<ol>
-<li>线程对共享数据的修改的对其他线程的可见性。</li>
-<li>当访问共享数据时的竞争问题。</li>
-</ol>
-<p><br></p>
-<h4 id="共享对象的可见性">共享对象的可见性</h4><p>比如说一个共享对象最开始存储在主存中，正在一个CPU上执行的线程将该对象读取到CPU缓存中然后修改了这个对象的值，那么只要CPU没有将缓存中被修改的对象刷新到主存中的话，那么其他访问该对象的线程访问的就是过时的数据，这就造成了可见性问题。最坏的情况是每个线程都持有一个该对象的拷贝，每个对象拷贝都存放在不同的CPU缓存中。</p>
-<p>下图的例子就是这种情况。左边的CPU上的线程将一个共享对象的拷贝存放在CPU缓存中，然后修改了该对象的count属性值为2，这个修改对右边CPU上的线程是不可见的，因为这个新修改的对象没有被刷新到主存中对应的对象。</p>
-<p><img src="http://tutorials.jenkov.com/images/java-concurrency/java-memory-model-6.png" alt="可见性问题"></p>
-<p>为了解决这个问题，可以给count变量加上volatile关键字，这个关键字可以保证count变量每次都从主存读取，然后修改之后立即写回到主存中。<br><br></p>
-<h4 id="竞争">竞争</h4><p>如果多个线程共享同一个对象，并且同时对该对象执行更新操作，这个时候就会发生竞争问题。</p>
-<p>比如线程A将主存中的一个对象读取到CPU缓存中，然后线程B也将该对象读取到另一个CPU缓存中，现在线程A对count变量加一，线程B同样也对count变量加一。这样count变量的值在两个CPU缓存中分别加了一。如果这些线程是顺序执行的话，那么两个线程执行完后主存中对象的count变量值将加二。但是如果两个线程是同时执行的话，那么不管是线程A还是线程B将count新值更新到主存中，最后主存中count的值都只加一，虽然总共被加了两次。</p>
-<p>下图演示了上述的竞争问题：</p>
-<p><img src="http://tutorials.jenkov.com/images/java-concurrency/java-memory-model-7.png" alt="竞争问题"></p>
-<p>为了解决这个问题你可以使用同步块。一个同步块可以保证在同一时刻只允许一个线程对该同步块内的变量进行访问，同步块还可以保证所有块内的变量被读取到CPU缓存或寄存器中后，一旦同步块代码执行完毕后，所有这些变量的新值都会被立刻刷新到主存中，不管这些变量是否是volatile的。</p>
-
-        
-        
-        <p class="article-more-link">
-          
-       </p>
-    </div>
-    <footer class="article-footer clearfix">
-<div class="article-catetags">
-
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
-</div>
-
-
-</div>
-
-
-
-
-<div class="comments-count">
-	
-	  	<span></span>
-		<a href="/2015/04/26/译-java多线程与同步机制系列(9)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/26/译-java多线程与同步机制系列(9)/" data-count-type="comments">&nbsp;</a>
-	
-</div>
-
-</footer>
-
-
-    </article>
-
-
-
-
-
-
 
   <nav id="page-nav" class="clearfix">
     <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">Next<span></span></a>
@@ -1050,7 +1025,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
   </div>
 
 
@@ -1060,7 +1035,7 @@
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>18</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>19</sup></a></li>
 		  
 		
 		  
