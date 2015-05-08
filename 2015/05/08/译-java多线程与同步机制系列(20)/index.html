@@ -1,0 +1,471 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>[译]java多线程与同步机制系列(20)--java读写锁 | 朱家骅的Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="朱家骅">
+    
+
+    
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/read-write-locks.html)
+读写锁是一种比上篇博客中提到的锁更加复杂的锁实现。想象一下你的应用需要对某些共享资源进行读写，并且读操作比写操作频繁的情况，两个线程读取同一个资源对双方都不会造成影响，所以多个线程可以同时对同一个资源进行读操作，但是如果一个线程需要对资源进行写操作，那么">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]java多线程与同步机制系列(20)--java读写锁">
+<meta property="og:url" content="http://yoursite.com/2015/05/08/译-java多线程与同步机制系列(20)/index.html">
+<meta property="og:site_name" content="朱家骅的Blog">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/read-write-locks.html)
+读写锁是一种比上篇博客中提到的锁更加复杂的锁实现。想象一下你的应用需要对某些共享资源进行读写，并且读操作比写操作频繁的情况，两个线程读取同一个资源对双方都不会造成影响，所以多个线程可以同时对同一个资源进行读操作，但是如果一个线程需要对资源进行写操作，那么">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(20)--java读写锁">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/read-write-locks.html)
+读写锁是一种比上篇博客中提到的锁更加复杂的锁实现。想象一下你的应用需要对某些共享资源进行读写，并且读操作比写操作频繁的情况，两个线程读取同一个资源对双方都不会造成影响，所以多个线程可以同时对同一个资源进行读操作，但是如果一个线程需要对资源进行写操作，那么">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="朱家骅的Blog">朱家骅的Blog</a></h1>
+				<h2 class="blog-motto">把流行的技术挂在嘴边，不如把过时的技术记在心里</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/categories">分类</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:yoursite.com">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/05/08/译-java多线程与同步机制系列(20)/" title="[译]java多线程与同步机制系列(20)--java读写锁" itemprop="url">[译]java多线程与同步机制系列(20)--java读写锁</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-08T00:42:33.000Z" itemprop="datePublished"> 发表于 2015-05-08</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#java中读写锁的实现"><span class="toc-number">1.</span> <span class="toc-text">java中读写锁的实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#可重入的读写锁"><span class="toc-number">2.</span> <span class="toc-text">可重入的读写锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#读可重入"><span class="toc-number">3.</span> <span class="toc-text">读可重入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#写可重入"><span class="toc-number">4.</span> <span class="toc-text">写可重入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#读到写可重入"><span class="toc-number">5.</span> <span class="toc-text">读到写可重入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#写到读可重入"><span class="toc-number">6.</span> <span class="toc-text">写到读可重入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#完整的可重入锁"><span class="toc-number">7.</span> <span class="toc-text">完整的可重入锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#在finally代码块中调用unlock方法"><span class="toc-number">8.</span> <span class="toc-text">在finally代码块中调用unlock方法</span></a></li></ol>
+		
+		</div>
+		
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/read-write-locks.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/read-write-locks.html</a>)</p>
+<p>读写锁是一种比上篇博客中提到的锁更加复杂的锁实现。想象一下你的应用需要对某些共享资源进行读写，并且读操作比写操作频繁的情况，两个线程读取同一个资源对双方都不会造成影响，所以多个线程可以同时对同一个资源进行读操作，但是如果一个线程需要对资源进行写操作，那么其他线程就无法对其进行读或者写操作。为了使得资源可以被多个资源同时读但是只允许一个线程写，就需要一个读写锁。</p>
+<p>java5中java.util.concurrent包里为我们提供了读写锁的实现，我们可以在需要它的时候直接使用，但是了解其背后的实现原理对我们来说也是很有必要的。<br><br></p>
+<h3 id="java中读写锁的实现">java中读写锁的实现</h3><p>首先我们总结一下获取资源读和写权限的情形：</p>
+<ol>
+<li>读权限： 没有线程获得该资源的写权限或者没有线程请求获得该资源的写权限</li>
+<li>写权限： 没有线程获得该资源的读权限或者写权限</li>
+</ol>
+<p>如果一个线程想获得资源读权限，只要当前没有线程正在对资源进行写操作或者没有线程请求获得该资源的写权限的话，该线程可以成功获得读权限，在这里之所以优先考虑线程对资源的写权限请求是因为我们假设写操作比读操作更加重要。另外，如果读操作经常发生并且我们没有优先考虑写操作的话，就有可能发生饥饿。请求写操作权限的线程就一直阻塞直到所有读线程解锁该Lock对象。如果新的线程一直获取读权限的话，那么申请写权限的线程将一直阻塞导致饥饿。为了解决这个问题，线程只有在没有其他线程在执行写操作或者请求写操作权限的情况下才能获取该资源的读操作权限。</p>
+<p>线程想要获取写权限的话必须保证没有其他线程正在对该资源进行读操作或者写操作。在这里，除非你希望在请求写权限的线程间保持公平性，否则我们不会理会到底有多少线程在请求写权限或者以什么顺序在请求获取写权限。</p>
+<p>根据这些规则我们实现了一个ReadWriteLock锁，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReadWriteLock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> readers       = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> writers       = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> writeRequests = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lockRead</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(writers &gt; <span class="number">0</span> || writeRequests &gt; <span class="number">0</span>)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    readers++;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlockRead</span><span class="params">()</span></span>&#123;</span><br><span class="line">    readers--;</span><br><span class="line">    notifyAll();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lockWrite</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    writeRequests++;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(readers &gt; <span class="number">0</span> || writers &gt; <span class="number">0</span>)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    writeRequests--;</span><br><span class="line">    writers++;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlockWrite</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    writers--;</span><br><span class="line">    notifyAll();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个类有两个lock方法和两个unlock方法，其中一对lock方法和unlock方法是针对读权限，另一对则针对写权限。</p>
+<p>lockRead方法实现中规定了读权限的获取规则：没有其他线程获取了写权限或者正在请求写权限。</p>
+<p>lockWrite方法中规定了写权限的获取规则：一个线程想获取写权限的话，首先提出请求(writeRequests++),然后判断是否可以获取写权限，判断条件是没有其他线程持有读权限或者写权限，在这里没有考虑到底有多少线程在请求写权限。</p>
+<p>这里有必要提一下为什么unlock方法中都用的是notifyAll方法而不是notify方法，请假设下面这种情况：<br>在ReadWriteLock对象上有多个线程在等待获取读权限，多个线程在等待获取写权限。如果一个等待获取读权限的线程被notify唤醒了，那么该线程又将进入等待状态因为此时有多个线程在等待写权限，那么这次notify等于没有任何效果，没有任何线程可以获得读权限或者写权限。所以这里我们使用notifyAll方法唤醒所有等待线程，这样总会有线程可以获取到它想要的权限。</p>
+<p>使用notifyAll还有一个好处，当多个线程在等待读权限并且没有线程在等待写权限时，unlockWrite方法的调用会唤醒所有线程，那么等待读权限的线程可以同时获取读权限而不必一个接一个的被唤醒获取读权限。<br><br></p>
+<h3 id="可重入的读写锁">可重入的读写锁</h3><p>上面这个ReadWriteLock锁的实现不是可重入的，如果一个已经持有写权限的线程再次请求写权限的话将陷入阻塞因为此时已经有一个线程获取了写权限，而这个线程就是它自己。另外我们再考虑以下这种情况：</p>
+<ol>
+<li>线程1持有读权限</li>
+<li>线程2请求写权限但是被阻塞，因为此时线程1持有读权限</li>
+<li>线程1再次请求读权限但是被阻塞，因为现在有一个线程2的写权限的请求。</li>
+</ol>
+<p>上面这种情况有点类似于死锁，此时没有任何线程可以获取读权限或者写权限。</p>
+<p>为了让ReadWriteLock成为可重入的，我们需要对代码进行一些修改。我们将分开讨论针对读操作和写操作的可重入问题。<br><br></p>
+<h3 id="读可重入">读可重入</h3><p>为了使ReadWriteLock对于读操作可重入，我们需要建立规则：一个线程可以获得可重入的读权限，当且仅当该线程可以获得读权限或者它本身已经持有读权限。</p>
+<p>为了判断一个线程是否已经拥有了读权限，我们建立了一个Map对象保存了已经获取了读权限的线程以及它获取读权限的次数。当需要判断线程是否可以获取读权限时首先将从Map对象中获取该线程的引用。下面就是lockRead方法和unlockRead方法修改后的代码：</p>
+<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReadWriteLock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> Map&lt;Thread, Integer&gt; readingThreads =</span><br><span class="line">      <span class="keyword">new</span> HashMap&lt;Thread, Integer&gt;();</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> writers        = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> writeRequests  = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="function"><span class="keyword">void</span> <span class="title">lockRead</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    Thread callingThread = Thread.currentThread();</span><br><span class="line">    <span class="keyword">while</span>(! canGrantReadAccess(callingThread))&#123;</span><br><span class="line">      wait();                                                                   </span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    readingThreads.put(callingThread,</span><br><span class="line">       (getAccessCount(callingThread) + <span class="number">1</span>));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="function"><span class="keyword">void</span> <span class="title">unlockRead</span><span class="params">()</span></span>&#123;</span><br><span class="line">    Thread callingThread = Thread.currentThread();</span><br><span class="line">    <span class="keyword">int</span> accessCount = getAccessCount(callingThread);</span><br><span class="line">    <span class="keyword">if</span>(accessCount == <span class="number">1</span>)&#123; readingThreads.remove(callingThread); &#125;</span><br><span class="line">    <span class="keyword">else</span> &#123; readingThreads.put(callingThread, (accessCount -<span class="number">1</span>)); &#125;</span><br><span class="line">    notifyAll();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">canGrantReadAccess</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(writers &gt; <span class="number">0</span>)            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">if</span>(isReader(callingThread) <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">if</span>(writeRequests &gt; <span class="number">0</span>)      <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">int</span> <span class="title">getReadAccessCount</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    Integer accessCount = readingThreads.get(callingThread);</span><br><span class="line">    <span class="keyword">if</span>(accessCount == <span class="keyword">null</span>) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    <span class="function"><span class="keyword">return</span> accessCount.<span class="title">intValue</span><span class="params">()</span></span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">isReader</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> readingThreads.get(callingThread) != <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从代码中我们可以看到，如果当前没有线程持有写权限或者当前请求线程已经持有了读权限的话，此时该线程可以再次获取读权限，这样保证了读权限可重入。注意从canGrantReadAccess方法中可以看出，三个判断语句的顺序对可重入读权限的获取非常重要，尤其是第二个和第三个if语句，这样可以保证只要当前线程已经拥有了读权限的话，即使现在有其他线程的写权限请求，当前线程优先获得读权限。<br><br></p>
+<h3 id="写可重入">写可重入</h3><p>写可重入的前提是当前线程已经获得了写权限，修改后的lockWrite方法和unlockWrite方法如下所示:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReadWriteLock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Map&lt;Thread, Integer&gt; readingThreads =</span><br><span class="line">        <span class="keyword">new</span> HashMap&lt;Thread, Integer&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> writeAccesses    = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> writeRequests    = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> Thread writingThread = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lockWrite</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    writeRequests++;</span><br><span class="line">    Thread callingThread = Thread.currentThread();</span><br><span class="line">    <span class="keyword">while</span>(! canGrantWriteAccess(callingThread))&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    writeRequests--;</span><br><span class="line">    writeAccesses++;</span><br><span class="line">    writingThread = callingThread;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlockWrite</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    writeAccesses--;</span><br><span class="line">    <span class="keyword">if</span>(writeAccesses == <span class="number">0</span>)&#123;</span><br><span class="line">      writingThread = <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    notifyAll();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">canGrantWriteAccess</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(hasReaders())             <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">if</span>(writingThread == <span class="keyword">null</span>)    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">if</span>(!isWriter(callingThread)) <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">hasReaders</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> readingThreads.size() &gt; <span class="number">0</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">isWriter</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> writingThread == callingThread;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意到判断当前线程是否可以获取可重入写权限时当前线程是否持有写权限被纳入考虑范围。<br><br></p>
+<h3 id="读到写可重入">读到写可重入</h3><p>有时候需要让一个拥有读权限的线程可以获取写权限，为了达到这个目的，首先该线程必须是唯一一个读线程。我们对writeLock方法进行了一下修改使得可以做到读到写可重入，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReadWriteLock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Map&lt;Thread, Integer&gt; readingThreads =</span><br><span class="line">        <span class="keyword">new</span> HashMap&lt;Thread, Integer&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> writeAccesses    = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> writeRequests    = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> Thread writingThread = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lockWrite</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    writeRequests++;</span><br><span class="line">    Thread callingThread = Thread.currentThread();</span><br><span class="line">    <span class="keyword">while</span>(! canGrantWriteAccess(callingThread))&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    writeRequests--;</span><br><span class="line">    writeAccesses++;</span><br><span class="line">    writingThread = callingThread;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlockWrite</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    writeAccesses--;</span><br><span class="line">    <span class="keyword">if</span>(writeAccesses == <span class="number">0</span>)&#123;</span><br><span class="line">      writingThread = <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    notifyAll();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">canGrantWriteAccess</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(isOnlyReader(callingThread))    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">if</span>(hasReaders())                   <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">if</span>(writingThread == <span class="keyword">null</span>)          <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">if</span>(!isWriter(callingThread))       <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">hasReaders</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> readingThreads.size() &gt; <span class="number">0</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">isWriter</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> writingThread == callingThread;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">isOnlyReader</span><span class="params">(Thread thread)</span></span>&#123;</span><br><span class="line">      <span class="keyword">return</span> readingThreads.size() == <span class="number">1</span> &amp;&amp; readingThreads.get(callingThread) != <span class="keyword">null</span>;</span><br><span class="line">      &#125;</span><br><span class="line">        </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>现在这个ReadWriteLock类就支持读到写可重入了。<br><br></p>
+<h3 id="写到读可重入">写到读可重入</h3><p>有时候需要一个拥有写权限的线程可以获取读权限，只要该线程需要读权限的话可以毫不犹豫的给它权限，因为拥有写权限意味着其他线程无法获取读权限或者写权限，因此这个时候再给该线程读权限是没有任何问题的。对此我们只需要将canGrantReadAccess方法改写一下即可。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReadWriteLock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">canGrantReadAccess</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">      <span class="keyword">if</span>(isWriter(callingThread)) <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">      <span class="keyword">if</span>(writingThread != <span class="keyword">null</span>)   <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">      <span class="keyword">if</span>(isReader(callingThread)  <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">      <span class="keyword">if</span>(writeRequests &gt; <span class="number">0</span>)       <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h3 id="完整的可重入锁">完整的可重入锁</h3><p>下面是一个完整的可重入锁的实现，我重写了一些判断条件使得代码更易于阅读。</p>
+<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ReadWriteLock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> Map&lt;Thread, Integer&gt; readingThreads =</span><br><span class="line">       <span class="keyword">new</span> HashMap&lt;Thread, Integer&gt;();</span><br><span class="line"></span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">int</span> writeAccesses    = <span class="number">0</span>;</span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">int</span> writeRequests    = <span class="number">0</span>;</span><br><span class="line">   <span class="keyword">private</span> Thread writingThread = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="function"><span class="keyword">void</span> <span class="title">lockRead</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    Thread callingThread = Thread.currentThread();</span><br><span class="line">    <span class="keyword">while</span>(! canGrantReadAccess(callingThread))&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    readingThreads.put(callingThread,</span><br><span class="line">     (getReadAccessCount(callingThread) + <span class="number">1</span>));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">canGrantReadAccess</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>( isWriter(callingThread) ) <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">if</span>( hasWriter()             ) <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">if</span>( isReader(callingThread) ) <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">if</span>( hasWriteRequests()      ) <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="function"><span class="keyword">void</span> <span class="title">unlockRead</span><span class="params">()</span></span>&#123;</span><br><span class="line">    Thread callingThread = Thread.currentThread();</span><br><span class="line">    <span class="keyword">if</span>(!isReader(callingThread))&#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException(<span class="string">"Calling Thread does not"</span> +</span><br><span class="line">        <span class="string">" hold a read lock on this ReadWriteLock"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">int</span> accessCount = getReadAccessCount(callingThread);</span><br><span class="line">    <span class="keyword">if</span>(accessCount == <span class="number">1</span>)&#123; readingThreads.remove(callingThread); &#125;</span><br><span class="line">    <span class="keyword">else</span> &#123; readingThreads.put(callingThread, (accessCount -<span class="number">1</span>)); &#125;</span><br><span class="line">    notifyAll();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="function"><span class="keyword">void</span> <span class="title">lockWrite</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    writeRequests++;</span><br><span class="line">    Thread callingThread = Thread.currentThread();</span><br><span class="line">    <span class="keyword">while</span>(! canGrantWriteAccess(callingThread))&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    writeRequests--;</span><br><span class="line">    writeAccesses++;</span><br><span class="line">    writingThread = callingThread;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="function"><span class="keyword">void</span> <span class="title">unlockWrite</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(!isWriter(Thread.currentThread())&#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException(<span class="string">"Calling Thread does not"</span> +</span><br><span class="line">        <span class="string">" hold the write lock on this ReadWriteLock"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    writeAccesses--;</span><br><span class="line">    <span class="keyword">if</span>(writeAccesses == <span class="number">0</span>)&#123;</span><br><span class="line">      writingThread = <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    notifyAll();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">canGrantWriteAccess</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(isOnlyReader(callingThread))    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">if</span>(hasReaders())                   <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">if</span>(writingThread == <span class="keyword">null</span>)          <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    <span class="keyword">if</span>(!isWriter(callingThread))       <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">int</span> <span class="title">getReadAccessCount</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    Integer accessCount = readingThreads.get(callingThread);</span><br><span class="line">    <span class="keyword">if</span>(accessCount == <span class="keyword">null</span>) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    <span class="function"><span class="keyword">return</span> accessCount.<span class="title">intValue</span><span class="params">()</span></span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">hasReaders</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> readingThreads.size() &gt; <span class="number">0</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">isReader</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> readingThreads.get(callingThread) != <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">isOnlyReader</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> readingThreads.size() == <span class="number">1</span> &amp;&amp;</span><br><span class="line">           readingThreads.get(callingThread) != <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">hasWriter</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> writingThread != <span class="keyword">null</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">isWriter</span><span class="params">(Thread callingThread)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> writingThread == callingThread;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">boolean</span> <span class="title">hasWriteRequests</span><span class="params">()</span></span>&#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">this</span>.writeRequests &gt; <span class="number">0</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h3 id="在finally代码块中调用unlock方法">在finally代码块中调用unlock方法</h3><p>当用ReadWriteLock守护临界区时，临界区可能会抛出异常，那么就有必要在finally代码快中调用readUnlock和writeUnlock方法。这样可以确保ReadWriteLock对象一定可以被解锁而使其他线程可以给它上锁。代码如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">lock</span>.lockWrite();</span></span><br><span class="line">try&#123;</span><br><span class="line">  //<span class="operator"><span class="keyword">do</span> critical <span class="keyword">section</span> code, which may throw <span class="keyword">exception</span></span><br><span class="line">&#125; finally &#123;</span><br><span class="line">  <span class="keyword">lock</span>.unlockWrite();</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>finally块可以确保ReadwriteLock对象的锁被及时释放即使临界区抛出异常。如果unlock方法没有放在finally代码块中的话，一旦异常发生，锁没有被即使释放的话就会造成调用readLock或writeLock的线程一直阻塞，现在假设unlock方法没有放在finally代码快中并且发生了异常，那么现在唯一可以对ReadWriteLock对象解锁的方法就是依靠发生异常时持有该对象锁的线程重新调用lockWrite方法(针对上面的代码)，然后执行临界区代码，最后调用unlockWrite方法解锁，同时这还得依靠ReadWriteLock的可重入性。与其让我们等待该线程重新调用lockWrite方法，倒不如将unlockWrite方法放到finally代码块中去执行，这是一种更加健壮的解决方案。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://yoursite.com/2015/05/08/译-java多线程与同步机制系列(20)/" data-title="[译]java多线程与同步机制系列(20)--java读写锁 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/05/07/译-java多线程与同步机制系列(19)/"  title="[译]java多线程与同步机制系列(19)--java中的锁">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制系列(19)--java中的锁
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/05/08/译-java多线程与同步机制系列(20)/" data-title="[译]java多线程与同步机制系列(20)--java读写锁" data-url="http://yoursite.com/2015/05/08/译-java多线程与同步机制系列(20)/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#java中读写锁的实现"><span class="toc-number">1.</span> <span class="toc-text">java中读写锁的实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#可重入的读写锁"><span class="toc-number">2.</span> <span class="toc-text">可重入的读写锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#读可重入"><span class="toc-number">3.</span> <span class="toc-text">读可重入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#写可重入"><span class="toc-number">4.</span> <span class="toc-text">写可重入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#读到写可重入"><span class="toc-number">5.</span> <span class="toc-text">读到写可重入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#写到读可重入"><span class="toc-number">6.</span> <span class="toc-text">写到读可重入</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#完整的可重入锁"><span class="toc-number">7.</span> <span class="toc-text">完整的可重入锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#在finally代码块中调用unlock方法"><span class="toc-number">8.</span> <span class="toc-text">在finally代码块中调用unlock方法</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">归档</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+  </div>
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>20</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://www.csdn.net" target="_blank" title="CSDN">CSDN</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1685825420&verifier=f33b37d3&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> 大家好，我是朱家骅。 <br/>
+			欢迎来到我的技术博客！！！</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1685825420" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<a href="mailto:317560406@qq.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="朱家骅">朱家骅</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"flash03"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
