@@ -4,22 +4,29 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>[译]java多线程与同步机制系列(3)－－多线程的代价 | 朱家骅的Blog</title>
+    <title>[译]java多线程与同步机制系列(23)--阻塞队列 | 朱家骅的Blog</title>
     <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
     
     <meta name="author" content="朱家骅">
     
 
     
-    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/costs.html)多线程相对于单线程有优势，但是也有劣势，使用多线程使得我们不得不付出一些代价，因此，不要因为自己了解多线程，就在开发过程中不假思索的使用多线程。应该在开发之前认真思考，是否在该项目中使用多线程的好处会大于坏处。当你对于是否使用多线程感到困惑时，尝试着测试程序的运行效率和响应性来">
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/blocking-queues.html)
+阻塞队列是一种很特殊的队列，当线程尝试从一个空的阻塞队列中获取数据或者向一个满的阻塞队列中放入数据时都会阻塞。线程从一个空阻塞队列中获取数据将阻塞直到其他线程向其中插入了数据，而线程向一个满的阻塞队列中放入数据也将阻塞直到其他线程从该队列中取出数据。
+下面">
 <meta property="og:type" content="article">
-<meta property="og:title" content="[译]java多线程与同步机制系列(3)－－多线程的代价">
-<meta property="og:url" content="http://yoursite.com/2015/04/23/译-java多线程与同步机制系列(3)/index.html">
+<meta property="og:title" content="[译]java多线程与同步机制系列(23)--阻塞队列">
+<meta property="og:url" content="http://yoursite.com/2015/05/09/译-java多线程与同步机制系列(23)/index.html">
 <meta property="og:site_name" content="朱家骅的Blog">
-<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/costs.html)多线程相对于单线程有优势，但是也有劣势，使用多线程使得我们不得不付出一些代价，因此，不要因为自己了解多线程，就在开发过程中不假思索的使用多线程。应该在开发之前认真思考，是否在该项目中使用多线程的好处会大于坏处。当你对于是否使用多线程感到困惑时，尝试着测试程序的运行效率和响应性来">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/blocking-queues.html)
+阻塞队列是一种很特殊的队列，当线程尝试从一个空的阻塞队列中获取数据或者向一个满的阻塞队列中放入数据时都会阻塞。线程从一个空阻塞队列中获取数据将阻塞直到其他线程向其中插入了数据，而线程向一个满的阻塞队列中放入数据也将阻塞直到其他线程从该队列中取出数据。
+下面">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency-utils/blocking-queue.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="[译]java多线程与同步机制系列(3)－－多线程的代价">
-<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/costs.html)多线程相对于单线程有优势，但是也有劣势，使用多线程使得我们不得不付出一些代价，因此，不要因为自己了解多线程，就在开发过程中不假思索的使用多线程。应该在开发之前认真思考，是否在该项目中使用多线程的好处会大于坏处。当你对于是否使用多线程感到困惑时，尝试着测试程序的运行效率和响应性来">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(23)--阻塞队列">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/blocking-queues.html)
+阻塞队列是一种很特殊的队列，当线程尝试从一个空的阻塞队列中获取数据或者向一个满的阻塞队列中放入数据时都会阻塞。线程从一个空阻塞队列中获取数据将阻塞直到其他线程向其中插入了数据，而线程向一个满的阻塞队列中放入数据也将阻塞直到其他线程从该队列中取出数据。
+下面">
 
     
     
@@ -75,14 +82,14 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/04/23/译-java多线程与同步机制系列(3)/" title="[译]java多线程与同步机制系列(3)－－多线程的代价" itemprop="url">[译]java多线程与同步机制系列(3)－－多线程的代价</a>
+      <a href="/2015/05/09/译-java多线程与同步机制系列(23)/" title="[译]java多线程与同步机制系列(23)--阻塞队列" itemprop="url">[译]java多线程与同步机制系列(23)--阻塞队列</a>
   </h1>
   <p class="article-author">By
        
 		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
 		
   <p class="article-time">
-    <time datetime="2015-04-23T06:33:14.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
+    <time datetime="2015-05-09T13:48:11.000Z" itemprop="datePublished"> 发表于 2015-05-09</time>
     
   </p>
 </header>
@@ -91,17 +98,18 @@
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">文章目录</strong>
 		
-			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#更复杂的设计"><span class="toc-number">1.</span> <span class="toc-text">更复杂的设计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#过度的上下文切换"><span class="toc-number">2.</span> <span class="toc-text">过度的上下文切换</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#资源消耗的增加"><span class="toc-number">3.</span> <span class="toc-text">资源消耗的增加</span></a></li></ol>
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#阻塞队列的实现"><span class="toc-number">1.</span> <span class="toc-text">阻塞队列的实现</span></a></li></ol>
 		
 		</div>
 		
-		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/costs.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/costs.html</a>)<br><br><br>多线程相对于单线程有优势，但是也有劣势，使用多线程使得我们不得不付出一些代价，因此，不要因为自己了解多线程，就在开发过程中不假思索的使用多线程。应该在开发之前认真思考，是否在该项目中使用多线程的好处会大于坏处。当你对于是否使用多线程感到困惑时，尝试着测试程序的运行效率和响应性来作出确定，而不要仅仅靠猜测！</p>
-<h3 id="更复杂的设计">更复杂的设计</h3><p>在多线程程序中，某些部分的设计确实比单线程设计简单，但是其他部分的设计却比较复杂，比如说对共享内存进行操作的代码编写就需要额外小心谨慎，稍有不慎就会造成严重的后果。线程间的通信很简单的，但是线程同步过程中所发生的错误是很难检测，重现以及修复的。</p>
-<h3 id="过度的上下文切换">过度的上下文切换</h3><p>当CPU从执行一个线程切换到执行另外一个线程时，CPU需要保存当前线程的本地数据，程序计数器等等，然后将即将执行的线程的本地数据和程序计数器等数据载入，这个切换称为“上下文切换”。CPU从一个线程的执行上下文切换到另一个线程的上下文。</p>
-<p>上下文切换代价很大，你肯定不希望在非必要情况下进行线程上下文的切换。</p>
-<p>你可以在维基百科上获得更多关于上下文切换的知识：</p>
-<p>(<a href="http://en.wikipedia.org/wiki/Context_switch" target="_blank" rel="external">http://en.wikipedia.org/wiki/Context_switch</a>)</p>
-<h3 id="资源消耗的增加">资源消耗的增加</h3><p>一个线程运行时需要很多计算机资源，除了CPU运行时间外还需要内存来存放本地栈。除此之外，操作系统也需要消耗一些计算资源来管理这个线程，试试写一个程序在运行时创建1000条线程，这1000条线程什么都不做，但又不结束，然后去查看当程序运行时内存的占用情况。</p>
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/blocking-queues.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/blocking-queues.html</a>)</p>
+<p>阻塞队列是一种很特殊的队列，当线程尝试从一个空的阻塞队列中获取数据或者向一个满的阻塞队列中放入数据时都会阻塞。线程从一个空阻塞队列中获取数据将阻塞直到其他线程向其中插入了数据，而线程向一个满的阻塞队列中放入数据也将阻塞直到其他线程从该队列中取出数据。</p>
+<p>下面这张图显示了两个线程对同一个阻塞队列进行操作：</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency-utils/blocking-queue.png" alt="一个线程插入数据，一个线程取出数据"></p>
+<p>java5的java.utl.cocurrent包提供了阻塞队列的实现，你可以在我的<a href="http://tutorials.jenkov.com/java-util-concurrent/blockingqueue.html" target="_blank" rel="external">java.util.concurrent.BlockingQueue</a>这篇博客中查看关于该类的具体讲解。即使有了官方提供的实现类，我们依然有必要了解其背后运行的原理。</p>
+<h3 id="阻塞队列的实现">阻塞队列的实现</h3><p>阻塞队列的实现有点像上一遍博客讲到的有限信号(BoundedSemaphore)。下面是一个简单的阻塞队列的实现：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> BlockingQueue &#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> List <span class="built_in">queue</span> = <span class="keyword">new</span> LinkedList();</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span>  limit = <span class="number">10</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">BlockingQueue</span><span class="params">(<span class="keyword">int</span> limit)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.limit = limit;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> synchronized <span class="keyword">void</span> <span class="title">enqueue</span><span class="params">(Object item)</span></span><br><span class="line">  throws InterruptedException  </span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(<span class="keyword">this</span>.<span class="built_in">queue</span>.size() == <span class="keyword">this</span>.limit) &#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">this</span>.<span class="built_in">queue</span>.size() == <span class="number">0</span>) &#123;</span><br><span class="line">      notifyAll();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">this</span>.<span class="built_in">queue</span>.add(item);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> synchronized Object <span class="title">dequeue</span><span class="params">()</span></span><br><span class="line">  throws InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(<span class="keyword">this</span>.<span class="built_in">queue</span>.size() == <span class="number">0</span>)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">this</span>.<span class="built_in">queue</span>.size() == <span class="keyword">this</span>.limit)&#123;</span><br><span class="line">      notifyAll();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.<span class="built_in">queue</span>.remove(<span class="number">0</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意到notifyAll方法只有在队列为空或满的情况下才会调用。如果调用enqueue或者dequeue方法的时候队列不是满的或是空的，那么就不会有线程阻塞。</p>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -119,7 +127,7 @@
 
 	<div class="article-share" id="share">
 	
-	  <div data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制系列(3)/" data-title="[译]java多线程与同步机制系列(3)－－多线程的代价 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  <div data-url="http://yoursite.com/2015/05/09/译-java多线程与同步机制系列(23)/" data-title="[译]java多线程与同步机制系列(23)--阻塞队列 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
 	  </div>
 	
 	</div>
@@ -132,19 +140,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/04/23/译-java多线程与同步机制系列(4)/" title="[译]java多线程与同步机制系列(4)－－同步模型">
-  <strong>上一篇：</strong><br/>
-  <span>
-  [译]java多线程与同步机制系列(4)－－同步模型</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/04/23/译-java多线程与同步机制系列(2)/"  title="[译]java多线程与同步机制系列(2)－－java多线程的优势">
+<a href="/2015/05/09/译-java多线程与同步机制系列(22)/"  title="[译]java多线程与同步机制系列(22)--信号">
  <strong>下一篇：</strong><br/> 
- <span>[译]java多线程与同步机制系列(2)－－java多线程的优势
+ <span>[译]java多线程与同步机制系列(22)--信号
 </span>
 </a>
 </div>
@@ -153,7 +153,7 @@
 
 	
 <section id="comments" class="comment">
-	<div class="ds-thread" data-thread-key="2015/04/23/译-java多线程与同步机制系列(3)/" data-title="[译]java多线程与同步机制系列(3)－－多线程的代价" data-url="http://yoursite.com/2015/04/23/译-java多线程与同步机制系列(3)/"></div>
+	<div class="ds-thread" data-thread-key="2015/05/09/译-java多线程与同步机制系列(23)/" data-title="[译]java多线程与同步机制系列(23)--阻塞队列" data-url="http://yoursite.com/2015/05/09/译-java多线程与同步机制系列(23)/"></div>
 </section>
 
 
@@ -163,7 +163,7 @@
   <div id="toc" class="toc-aside">
   <strong class="toc-title">文章目录</strong>
  
- <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#更复杂的设计"><span class="toc-number">1.</span> <span class="toc-text">更复杂的设计</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#过度的上下文切换"><span class="toc-number">2.</span> <span class="toc-text">过度的上下文切换</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#资源消耗的增加"><span class="toc-number">3.</span> <span class="toc-text">资源消耗的增加</span></a></li></ol>
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#阻塞队列的实现"><span class="toc-number">1.</span> <span class="toc-text">阻塞队列的实现</span></a></li></ol>
  
   </div>
 
