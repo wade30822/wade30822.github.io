@@ -77,6 +77,90 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
+      <a href="/2015/04/23/译-java多线程与同步机制系列(2)/" title="[译]java多线程与同步机制系列(2)－－java多线程的优势" itemprop="url">[译]java多线程与同步机制系列(2)－－java多线程的优势</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-04-23T02:26:57.000Z" itemprop="datePublished"> 发表于 2015-04-23</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/benefits.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/benefits.html</a>)<br><br><br>尽管多线程会带来各种各样的困扰和挑战，但是java多线程开发依然流行，其原因是因为它具有以下优点：</p>
+<ol>
+<li>更好的资源利用</li>
+<li>某些场景下简化程序设计</li>
+<li>使程序更具响应性</li>
+</ol>
+<h3 id="更好的资源利用">更好的资源利用</h3><p>想象一个从本地文件系统中读取和处理文件的程序，我们假设读取一个文件需要5秒钟，处理一个文件需要2秒钟，那么处理2个文件就需要花费14秒钟：</p>
+<pre><code>5 seconds reading file A
+2 seconds processing file A
+5 seconds reading file B
+<span class="header">2 seconds processing file B
+-----------------------</span>
+14 seconds total
+</code></pre><p>当从磁盘上读取文件的时候，CPU此时便在等待读取文件完成然后继续相关操作，这也就是说这一段时间CPU其实是浪费掉了，它本应该可以执行其他程序。当然，通过调整执行顺序，我们可以优化CPU的执行效率，接下来我们来看看如何优化：</p>
+<pre><code>5 seconds reading file A
+5 seconds reading file B + 2 seconds processing file A
+<span class="header">2 seconds processing file B
+-----------------------</span>
+12 seconds total
+</code></pre><p>当CPU在等待文件B读取完成的时间内，可以处理文件A，这样，CPU就不会被浪费。记住一点：当CPU在等待文件读取的时候它是出于空闲状态的！！！<br><br><br>总之，CPU在等待IO的时候是可以执行其他任务来避免浪费的，不只是磁盘IO，在等待网络IO以及用户输入的时候也是如此。另外记住一点，磁盘IO和网络IO是比CPU与内存之间的IO慢得多的。</p>
+<h3 id="更简单的程序设计">更简单的程序设计</h3><p>如果你是在一个单线程程序中按照以上的读取顺序运行的话，你可以跟踪和控制每个文件的读取和处理状态。但是如果创建两个线程，每个线程负责其中一个文件的读取和处理的话，问题就来了，两个线程中总有一个会在发起文件读取操作时被阻塞，因为此时另外一个线程正在进行IO操作，那么当这个线程在等待的时候，另一个线程就可以占用CPU来处理已经读取到的文件，那么结果就是磁盘就一直处于忙碌状态，不断的将文件从磁盘中传输到内存中。多线程的使用使得CPU和磁盘的效率都有所提升，结果就是整个程序效率的提升。程序设计的简单体现在每个线程只需要处理一个文件。</p>
+<h3 id="响应性">响应性</h3><p>多线程程序相比较单线程程序更具响应性，想象一个从多个端口接受请求的服务器程序，当一个请求到来的时候，它处理完请求后返回继续监听端口，整个服务器的运行框架如下：</p>
+<figure class="highlight vbscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(<span class="built_in">server</span> <span class="keyword">is</span> active)&#123;</span><br><span class="line">    listen <span class="keyword">for</span> <span class="built_in">request</span></span><br><span class="line">    process <span class="built_in">request</span></span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>这就带来了一个问题：当一个请求的处理需要很长时间的话，那么这段时间内新来的请求将无法处理，因为只有当服务器处于监听状态时才能接受请求。<br>一种可行的改进方案时监听线程将接受到的请求传递给一个工作线程处理然后继续监听，工作线程处理请求后将结果返回给客户端，这种设计的框架如下：</p>
+<figure class="highlight vbscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(<span class="built_in">server</span> <span class="keyword">is</span> active)&#123;</span><br><span class="line">  listen <span class="keyword">for</span> <span class="built_in">request</span></span><br><span class="line">  hand <span class="built_in">request</span> <span class="keyword">to</span> worker thread</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这种方式使得服务器监听线程可以不断的接受请求，即使请求源源不断的到来。这使得服务器更具响应性。</p>
+<p>这种模式对桌面程序同样有效。当点击一个按钮开始执行一个长时间任务时，如果是采用单线程，那么执行这个长时间任务的线程就是UI线程，那么此时这个程序给用户造成假死的表象，而实际上，此时程序正在执行一个用户主动请求的任务，这就是不具备响应性的表现。换一种方式，像上面服务器程序一样，把这个长时间任务交给工作线程来执行，UI线程依然能够处理用户的其他请求，工作线程执行完后，通知UI线程更新UI给予用户结果提示，这种依靠工作线程执行复杂耗时任务，UI线程处理用户UI操作的模式更具有我们所说的响应性。</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/04/23/译-java多线程与同步机制系列(2)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/23/译-java多线程与同步机制系列(2)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
       <a href="/2015/04/23/译-java多线程与同步机制系列(1)/" title="[译]java多线程与同步机制系列(1)－－综述" itemprop="url">[译]java多线程与同步机制系列(1)－－综述</a>
   </h1>
   <p class="article-author">By
@@ -147,7 +231,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
   </div>
 
 
@@ -157,7 +241,7 @@
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>20</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>21</sup></a></li>
 		  
 		
 		  
