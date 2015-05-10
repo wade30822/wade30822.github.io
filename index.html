@@ -77,6 +77,75 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
+      <a href="/2015/05/10/译-java多线程与同步机制系列(24)/" title="[译]java多线程与同步机制系列(24)--线程池" itemprop="url">[译]java多线程与同步机制系列(24)--线程池</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-10T00:47:42.000Z" itemprop="datePublished"> 发表于 2015-05-10</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/thread-pools.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/thread-pools.html</a>)</p>
+<p>当你需要限制程序中运行的线程数量的时候线程池就显得非常必要了。因为每启动一个线程都会有性能开销，都需要为其分配线程栈。</p>
+<p>我们不会为每一个任务创建一个线程去执行它，相反，我们会把这个任务放到线程池中去，当线程池中有空闲线程的话就将这个任务交给该线程去执行。在线程池内部，任务都是存储在阻塞队列中，空闲线程也是从阻塞队列中直接获取任务执行。当一个新任务被加入阻塞队列中时，空闲线程将取出并运行该任务。而其他的空闲线程将一直阻塞直到有新的任务被加入阻塞队列。</p>
+<p>线程池经常被用在多线程服务器中，服务器从网络接收到一个请求后一般会将该请求封装成一个任务放入线程池。线程池中的线程将同步执行这些连接请求。将来我会出一个教程专门讲解如何使用java构建一个多线程服务器。</p>
+<p>java5的java.util.cocurrent包中内置了线程池的实现，所以我们没有必要自己写代码实现线程池。你可以在我的博客<a href="http://tutorials.jenkov.com/java-util-concurrent/executorservice.html" target="_blank" rel="external">java.util.concurrent.ExecutorService</a>中查看关于线程池的更多信息。在这里，我们有必要了解一下线程池背后的实现原理。</p>
+<p>下面是一个简单的线程池的例子，请注意这里的BlockingQueue就是我们上一篇博客<a href="http://tutorials.jenkov.com/java-concurrency/blocking-queues.html" target="_blank" rel="external">Blocking Queues</a>实现的阻塞队列。在实际开发中你可能会直接使用java内置的BlockingQueue类。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ThreadPool</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> BlockingQueue taskQueue = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">private</span> List&lt;PoolThread&gt; threads = <span class="keyword">new</span> ArrayList&lt;PoolThread&gt;();</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span> isStopped = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ThreadPool</span><span class="params">(<span class="keyword">int</span> noOfThreads, <span class="keyword">int</span> maxNoOfTasks)</span></span>&#123;</span><br><span class="line">        taskQueue = <span class="keyword">new</span> BlockingQueue(maxNoOfTasks);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>; i&lt;noOfThreads; i++)&#123;</span><br><span class="line">            threads.add(<span class="keyword">new</span> PoolThread(taskQueue));</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span>(PoolThread thread : threads)&#123;</span><br><span class="line">            thread.start();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span>  <span class="title">execute</span><span class="params">(Runnable task)</span> <span class="keyword">throws</span> Exception</span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(<span class="keyword">this</span>.isStopped) <span class="keyword">throw</span></span><br><span class="line">            <span class="keyword">new</span> IllegalStateException(<span class="string">"ThreadPool is stopped"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.taskQueue.enqueue(task);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">stop</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.isStopped = <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">for</span>(PoolThread thread : threads)&#123;</span><br><span class="line">           thread.doStop();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">PoolThread</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> BlockingQueue taskQueue = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">boolean</span>       isStopped = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">PoolThread</span><span class="params">(BlockingQueue queue)</span></span>&#123;</span><br><span class="line">        taskQueue = queue;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">while</span>(!isStopped())&#123;</span><br><span class="line">            <span class="keyword">try</span>&#123;</span><br><span class="line">                Runnable runnable = (Runnable) taskQueue.dequeue();</span><br><span class="line">                runnable.run();</span><br><span class="line">            &#125; <span class="keyword">catch</span>(Exception e)&#123;</span><br><span class="line">                <span class="comment">//log or otherwise report exception,</span></span><br><span class="line">                <span class="comment">//but keep pool thread alive.</span></span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">doStop</span><span class="params">()</span></span>&#123;</span><br><span class="line">        isStopped = <span class="keyword">true</span>;</span><br><span class="line">        <span class="keyword">this</span>.interrupt(); <span class="comment">//break pool thread out of dequeue() call.</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">boolean</span> <span class="title">isStopped</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> isStopped;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>线程池的实现包括两个部分，一个是Thread Pool类作为线程池的公开接口，另一个则是继承了Thread类的PoolThread，用来执行任务。</p>
+<p>当需要执行一个任务时，线程池调用execute方法，这里传入的参数是Runnable对象，该对象会保存到线程池的阻塞队列taskQueue中等待空闲线程将它取出并执行，空闲线程取出并执行任务的过程在PoolThread.run方法中定义，当其执行完该任务后会继续循环从阻塞队列中取出新的任务执行。</p>
+<p>ThreadPool.stop方法用来停止线程池的执行。这个停止操作信号被存储在了内部的isStopped成员变量中，然后线程池的每个线程执行doStop方法。另外我们注意到当ThreadPool在stop方法后继续执行execute方法后会爬出IllegalStateException异常。</p>
+<p>线程会在执行完当前任务后停止，注意到doStop方法中的interrupt方法，这个方法可以确保所有在taskQueue的dequeue方法上被阻塞的线程全部退出dequeue方法，它的实现原理是通过抛出一个InterupptedException异常，而这个异常随后在PoolThread.run方法中被捕获，记录，随后线程检查isStopped变量的值，由于此时isStopped的值为true，所以线程停止运行。</p>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/05/10/译-java多线程与同步机制系列(24)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/05/10/译-java多线程与同步机制系列(24)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
       <a href="/2015/05/09/译-java多线程与同步机制系列(23)/" title="[译]java多线程与同步机制系列(23)--阻塞队列" itemprop="url">[译]java多线程与同步机制系列(23)--阻塞队列</a>
   </h1>
   <p class="article-author">By
@@ -891,83 +960,6 @@
 
 
 
-   
-    
-    <article class="post-expand post" itemprop="articleBody"> 
-        <header class="article-info clearfix">
-  <h1 itemprop="name">
-    
-      <a href="/2015/05/02/译-java多线程与同步机制系列(14)/" title="[译]java多线程与同步机制系列(14)--线程死锁" itemprop="url">[译]java多线程与同步机制系列(14)--线程死锁</a>
-  </h1>
-  <p class="article-author">By
-       
-		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
-		
-  <p class="article-time">
-    <time datetime="2015-05-02T00:24:12.000Z" itemprop="datePublished"> 发表于 2015-05-02</time>
-    
-  </p>
-</header>
-    <div class="article-content">
-        
-        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/deadlock.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/deadlock.html</a>)</p>
-<h3 id="线程死锁">线程死锁</h3><p>当两个或多个线程都试图获取对方所持有的锁时就会发生死锁。</p>
-<p>举个例子，线程1持有A对象的锁，线程2持有B对象的锁，现在线程1企图获得B对象的锁，而线程2企图获得A对象的锁，这种情况下就会发生死锁，因为线程1永远无法获得B对象的锁，线程2永远无法获得A对象的锁，除此之外，两个线程永远不会察觉到这种情况，它们将继续在A对象和B对象上阻塞。</p>
-<p>这种情况如下所示：</p>
-<figure class="highlight actionscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Thread <span class="number">1</span>  locks A, waits <span class="keyword">for</span> B</span><br><span class="line">Thread <span class="number">2</span>  locks B, waits <span class="keyword">for</span> A</span><br></pre></td></tr></table></figure>
-<p>下面是一个TreeNode类在不同实体上调用同步方法的例子：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TreeNode</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">  TreeNode parent   = <span class="keyword">null</span>;  </span><br><span class="line">  List     children = <span class="keyword">new</span> ArrayList();</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">addChild</span><span class="params">(TreeNode child)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(!<span class="keyword">this</span>.children.contains(child)) &#123;</span><br><span class="line">      <span class="keyword">this</span>.children.add(child);</span><br><span class="line">      child.setParentOnly(<span class="keyword">this</span>);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">addChildOnly</span><span class="params">(TreeNode child)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(!<span class="keyword">this</span>.children.contains(child)&#123;</span><br><span class="line">      <span class="keyword">this</span>.children.add(child);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">setParent</span><span class="params">(TreeNode parent)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.parent = parent;</span><br><span class="line">    parent.addChildOnly(<span class="keyword">this</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">setParentOnly</span><span class="params">(TreeNode parent)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.parent = parent;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>如果线程1调用了parent.addChild(child)方法同时线程2调用child.setParent(parent)方法，那么对于同一个parent和child就会发生死锁。下面是发生这种情况的伪代码：</p>
-<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span> <span class="number">1</span>: <span class="keyword">parent</span><span class="built_in">.</span>addChild(child); <span class="comment">//locks parent</span></span><br><span class="line">          <span class="subst">--&gt;</span> child<span class="built_in">.</span>setParentOnly(<span class="keyword">parent</span>);</span><br><span class="line"></span><br><span class="line"><span class="keyword">Thread</span> <span class="number">2</span>: child<span class="built_in">.</span>setParent(<span class="keyword">parent</span>); <span class="comment">//locks child</span></span><br><span class="line">          <span class="subst">--&gt;</span> <span class="keyword">parent</span><span class="built_in">.</span>addChildOnly()</span><br></pre></td></tr></table></figure>
-<p>首先，线程1调用parent.addChild(child),因为addChild是一个同步方法，所以线程1将获得parent对象的锁而使其他线程无法访问parent对象。然后线程2调用child.setParent(parent)，因为setParent也是一个同步方法，所以线程2将获得child对象的锁而使其他线程无法访问。</p>
-<p>现在parent和child对象都被不同的线程持有锁，接下来线程1调用child.setParentOnly方法，但是现在child对象的锁被线程2持有没有释放，所以这个方法调用被阻塞。线程2调用parent.addChildOnly方法，但是parent对象的锁被线程1持有没有释放，所以这个方法调用被阻塞。现在两个线程都在等待对方持有的锁释放而导致死锁发生。</p>
-<p>注意到上面所说的情况是说同时发生，并且两个线程中parent和child都是指同一个。上面代码可能会在很长一段时间内运行良好但是却有可能突然发生死锁。</p>
-<p>死锁的发生确实需要两个线程同时获取锁，如果不是同时，那么在第一个代码例子中，线程1比线程2早一点点，那么线程1获得了对象A和对象B的锁，然后线程2将阻塞知道获取对象B的锁，那么这种情况下就不会发生死锁。因为线程调度经常是不可预测的，所以我们无法预测死锁什么时候会发生，只能说死锁可能发生。<br><br></p>
-<h3 id="更加复杂的死锁">更加复杂的死锁</h3><p>死锁可能在超过两个线程的情况下发生。这就让我们更难检测到死锁发生的具体位置。下面就是一个例子：</p>
-<figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">Thread</span> <span class="number">1</span>  locks A, waits for B</span><br><span class="line"><span class="keyword">Thread</span> <span class="number">2</span>  locks B, waits for <span class="keyword">C</span></span><br><span class="line"><span class="keyword">Thread</span> <span class="number">3</span>  locks <span class="keyword">C</span>, waits for <span class="keyword">D</span></span><br><span class="line"><span class="keyword">Thread</span> <span class="number">4</span>  locks <span class="keyword">D</span>, waits for A</span><br></pre></td></tr></table></figure>
-<p>线程1在等待线程2，线程2在等待线程3，线程3在等待线程4，线程4在等待线程1，死锁！！！！！<br><br></p>
-<h3 id="数据库死锁">数据库死锁</h3><p>死锁发生的更复杂的情形便是在数据库事件中。一个数据库事件可能包含多条SQL更新语句，当一个事件需要更新一条记录时，它会获得该记录的锁，那么其他尝试获取该记录锁的事件便会被阻塞直到当前获取该记录锁的事件执行完毕。一个事件中的多个更新请求可能会对多条记录上锁。</p>
-<p>如果多个事件同时尝试获取相同记录的锁，那么就有可能发生死锁。比如：</p>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">Transaction 1, request 1, locks record 1 for <span class="operator"><span class="keyword">update</span></span><br><span class="line"><span class="keyword">Transaction</span> <span class="number">2</span>, request <span class="number">1</span>, locks record <span class="number">2</span> <span class="keyword">for</span> <span class="keyword">update</span></span><br><span class="line"><span class="keyword">Transaction</span> <span class="number">1</span>, request <span class="number">2</span>, tries <span class="keyword">to</span> <span class="keyword">lock</span> record <span class="number">2</span> <span class="keyword">for</span> <span class="keyword">update</span>.</span><br><span class="line"><span class="keyword">Transaction</span> <span class="number">2</span>, request <span class="number">2</span>, tries <span class="keyword">to</span> <span class="keyword">lock</span> record <span class="number">1</span> <span class="keyword">for</span> <span class="keyword">update</span>.</span></span><br></pre></td></tr></table></figure>
-<p>因为这些锁被不同的请求持有，而且事件中需要的锁数据库是不可能提前知道，所以在数据库中很难检测和预防死锁。</p>
-
-        
-        
-        <p class="article-more-link">
-          
-       </p>
-    </div>
-    <footer class="article-footer clearfix">
-<div class="article-catetags">
-
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
-</div>
-
-
-</div>
-
-
-
-
-<div class="comments-count">
-	
-	  	<span></span>
-		<a href="/2015/05/02/译-java多线程与同步机制系列(14)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/05/02/译-java多线程与同步机制系列(14)/" data-count-type="comments">&nbsp;</a>
-	
-</div>
-
-</footer>
-
-
-    </article>
-
-
-
-
-
-
 
   <nav id="page-nav" class="clearfix">
     <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/2/">Next<span></span></a>
@@ -983,7 +975,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">11</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
   </div>
 
 
@@ -993,7 +985,7 @@
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>23</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>24</sup></a></li>
 		  
 		
 		  
