@@ -1,0 +1,486 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>[译]java多线程与同步机制系列(26)--同步块的内部组成 | 朱家骅的Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="朱家骅">
+    
+
+    
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/anatomy-of-a-synchronizer.html)
+即使很多同步块结构(locks,semophore,blocking queue)在功能上有区别,但是它们的内部设计却没有太大的区别，换句话说就是它们内部有很多相同或相似的组织结构。本文将重点讲解这些相同或相似的组织结构，了解这些组织结">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]java多线程与同步机制系列(26)--同步块的内部组成">
+<meta property="og:url" content="http://yoursite.com/2015/05/11/译-java多线程与同步机制系列-26/index.html">
+<meta property="og:site_name" content="朱家骅的Blog">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/anatomy-of-a-synchronizer.html)
+即使很多同步块结构(locks,semophore,blocking queue)在功能上有区别,但是它们的内部设计却没有太大的区别，换句话说就是它们内部有很多相同或相似的组织结构。本文将重点讲解这些相同或相似的组织结构，了解这些组织结">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(26)--同步块的内部组成">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/anatomy-of-a-synchronizer.html)
+即使很多同步块结构(locks,semophore,blocking queue)在功能上有区别,但是它们的内部设计却没有太大的区别，换句话说就是它们内部有很多相同或相似的组织结构。本文将重点讲解这些相同或相似的组织结构，了解这些组织结">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="朱家骅的Blog">朱家骅的Blog</a></h1>
+				<h2 class="blog-motto">把流行的技术挂在嘴边，不如把过时的技术记在心里</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/categories">分类</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:yoursite.com">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/05/11/译-java多线程与同步机制系列-26/" title="[译]java多线程与同步机制系列(26)--同步块的内部组成" itemprop="url">[译]java多线程与同步机制系列(26)--同步块的内部组成</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-11T00:21:53.000Z" itemprop="datePublished"> 发表于 2015-05-11</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#State"><span class="toc-number">1.</span> <span class="toc-text">State</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Access_Condition"><span class="toc-number">2.</span> <span class="toc-text">Access Condition</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#State_Changes"><span class="toc-number">3.</span> <span class="toc-text">State Changes</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Notification_Strategy"><span class="toc-number">4.</span> <span class="toc-text">Notification Strategy</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Test_and_Set_Method"><span class="toc-number">5.</span> <span class="toc-text">Test and Set Method</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Set_Method"><span class="toc-number">6.</span> <span class="toc-text">Set Method</span></a></li></ol>
+		
+		</div>
+		
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/anatomy-of-a-synchronizer.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/anatomy-of-a-synchronizer.html</a>)</p>
+<p>即使很多同步块结构(locks,semophore,blocking queue)在功能上有区别,但是它们的内部设计却没有太大的区别，换句话说就是它们内部有很多相同或相似的组织结构。本文将重点讲解这些相同或相似的组织结构，了解这些组织结构对我们今后实现自定义的同步块结构很有帮助。</p>
+<p>大多数的同步块的目的是为了守护临界区以防止多个线程访问该临界区造成混乱。为了保证这一点一般同步块都包含以下几个组成部分:</p>
+<ol>
+<li>State(状态)</li>
+<li>Access Condition(判断条件)</li>
+<li>State Changes(状态变换)</li>
+<li>Notification Strategy(通知策略)</li>
+<li>Test And Set Method(先判断后设置方法)</li>
+<li>Set Method(设置方法)</li>
+</ol>
+<p>并不是所有的同步块就必须要具有以上所有的组成部分，有些同步块只需要具备以上某些组成部分就能实现该同步块的功能<br><br></p>
+<h3 id="State">State</h3><p>同步块中的state是被Access Condition用来判断线程是否允许获取访问权限的。在<a href="http://tutorials.jenkov.com/java-concurrency/locks.html" target="_blank" rel="external">Lock</a>中，state被保存在一个boolean变量中代表lock对象是否已被上锁。在<a href="http://tutorials.jenkov.com/java-concurrency/semaphores.html#bounded" target="_blank" rel="external">Bounded Semaphore</a>中，state被保存在了一个计数器(int)和上边界(int)中分别表示该信号被发射的次数和最大次数。在<a href="http://tutorials.jenkov.com/java-concurrency/blocking-queues.html" target="_blank" rel="external">Blocking Queue</a>中，state被保存在了一个等待队列以及队列最大长度两个变量中。</p>
+<p>下面两个代码块取自Lock和BoundedSemaphore，其中的状态代码以注释标记:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="comment">//state is kept here</span></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>; </span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span><br><span class="line">  <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked = <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BoundedSemaphore</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="comment">//state is kept here</span></span><br><span class="line">      <span class="keyword">private</span> <span class="keyword">int</span> signals = <span class="number">0</span>;</span><br><span class="line">      <span class="keyword">private</span> <span class="keyword">int</span> bound   = <span class="number">0</span>;</span><br><span class="line">      </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">BoundedSemaphore</span><span class="params">(<span class="keyword">int</span> upperBound)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.bound = upperBound;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">take</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(<span class="keyword">this</span>.signals == bound) wait();</span><br><span class="line">    <span class="keyword">this</span>.signal++;</span><br><span class="line">    <span class="keyword">this</span>.notify();</span><br><span class="line">  &#125;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h3 id="Access_Condition">Access Condition</h3><p>Access Condition是用来判断一个线程执行test and set方法是否被允许，它是基于同步块中的state来作判断的。access condition通常在while循环中来进行判断以防止<a href="http://tutorials.jenkov.com/java-concurrency/thread-signaling.html#spuriouswakeups" target="_blank" rel="external">Spurious Wakeups</a>,它的判断结果非真即假。</p>
+<p>在<a href="http://tutorials.jenkov.com/java-concurrency/locks.html" target="_blank" rel="external">Lock</a>中，access condition只需要判断isLocked变量的值即可。在<a href="http://tutorials.jenkov.com/java-concurrency/semaphores.html#bounded" target="_blank" rel="external">Bounded Semaphore</a>中有两个access condition，它们的使用取决于线程是发送信号还是接收信号，如果是发送信号的话就判断signals变量的值是否小于upper bound的值，如果是接收信号的话就判断signals变量的值是否不等于0.</p>
+<p>下面两个代码块取自Lock和BoundedSemaphore，其中access condition以注释标记，注意判断都是在while循环中进行。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span><br><span class="line">  <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="comment">//access condition</span></span><br><span class="line">    <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked = <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BoundedSemaphore</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> signals = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> bound   = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">BoundedSemaphore</span><span class="params">(<span class="keyword">int</span> upperBound)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.bound = upperBound;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">take</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="comment">//access condition</span></span><br><span class="line">    <span class="keyword">while</span>(<span class="keyword">this</span>.signals == bound) wait();</span><br><span class="line">    <span class="keyword">this</span>.signals++;</span><br><span class="line">    <span class="keyword">this</span>.notify();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">release</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="comment">//access condition</span></span><br><span class="line">    <span class="keyword">while</span>(<span class="keyword">this</span>.signals == <span class="number">0</span>) wait();</span><br><span class="line">    <span class="keyword">this</span>.signals--;</span><br><span class="line">    <span class="keyword">this</span>.notify();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="State_Changes">State Changes</h3><p>一旦线程被允许进入临界区的话，那么它就可能会改变state的值来防止其他线程进入临界区。换句话说就是state是用来反映当前已经有一个线程在临界区内执行了，这个state的值将影响其他线程的access condition。</p>
+<p>在<a href="http://tutorials.jenkov.com/java-concurrency/locks.html" target="_blank" rel="external">Lock</a>中，state change是将isLocked设置为true，在Semaphore中是signals++和signals—。</p>
+<p>下面两个代码段取自Lock和BoundedSemaphore，state change以注释标记。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span><br><span class="line">  <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//state change</span></span><br><span class="line">    isLocked = <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="comment">//state change</span></span><br><span class="line">    isLocked = <span class="keyword">false</span>;</span><br><span class="line">    notify();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BoundedSemaphore</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> signals = <span class="number">0</span>;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> bound   = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">BoundedSemaphore</span><span class="params">(<span class="keyword">int</span> upperBound)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.bound = upperBound;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">take</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(<span class="keyword">this</span>.signals == bound) wait();</span><br><span class="line">    <span class="comment">//state change</span></span><br><span class="line">    <span class="keyword">this</span>.signals++;</span><br><span class="line">    <span class="keyword">this</span>.notify();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">release</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(<span class="keyword">this</span>.signals == <span class="number">0</span>) wait();</span><br><span class="line">    <span class="comment">//state change</span></span><br><span class="line">    <span class="keyword">this</span>.signals--;</span><br><span class="line">    <span class="keyword">this</span>.notify();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Notification_Strategy">Notification Strategy</h3><p>一旦线程改变了同步块中某个状态(State Changes)，有时候它需要唤醒其他等待线程，这次的状态变换可能会使其他线程的access condition判断为true。</p>
+<p>Notification Strategy包含以下三个形式：</p>
+<ol>
+<li>唤醒所有等待线程</li>
+<li>随机唤醒所有等待线程中的一个</li>
+<li>唤醒特定的一个等待线程</li>
+</ol>
+<p>唤醒所有线程非常简单。线程调用wait方法进入等待状态，一旦某个线程调用notifyAll方法的话会一次性唤醒所有等待线程。</p>
+<p>随机唤醒一个等待线程也很简单，线程只需要调用监视器对象的notify方法就可以唤醒在该对象上的一个等待线程，由于notify方法无法保证某个特定线程被唤醒，所以在这里被叫做随机唤醒线程。</p>
+<p>有些时候我们需要唤醒特定的等待线程而不是随机唤醒，比如在某些情况下我们需要使等待线程以特定的顺序执行。为了实现这一点，每个线程需要在单独的监视器上调用wait方法，当通知线程需要唤醒某个特定的等待线程时，它只需要调用特定的监视器对象上的notify方法即可，在讲<a href="http://tutorials.jenkov.com/java-concurrency/starvation-and-fairness.html" target="_blank" rel="external">Starvation and Fairness</a>时我们举过例子，这里不再复述。</p>
+<p>下面这段代码块是第二种形式的Notification Strategy(随机唤醒一个等待线程),相关代码以注释标记:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span></span><br><span class="line">  <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">      <span class="comment">//wait strategy - related to notification strategy</span></span><br><span class="line">      wait();</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked = <span class="keyword">true</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    isLocked = <span class="keyword">false</span>;</span><br><span class="line">    notify(); <span class="comment">//notification strategy</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Test_and_Set_Method">Test and Set Method</h3><p>同步块中一般有两种方法，其中一种是Test and Set方法，该方法首先通过Access Condition来test内部状态，如果判断通过线程将改变状态的值(set)来表示当前已经有线程获得了访问权限。</p>
+<p>状态变换通常会使其他尝试获得访问权限的线程进行Access Condition时判断为false而阻塞，但也有例外，在Read/Write锁中，线程获得读权限的话将更新内部状态，但是其他线程依然可以获得该读权限，当然前提是此时没有写权限的请求。</p>
+<p>还有一点非常重要，那就是Test And Set方法必须是原子方法，这意味着其他线程不允许在当前线程执行该方法时执行Test And Set方法。</p>
+<p>Test And Set方法的内部流程如下所示：</p>
+<ol>
+<li>必要时先设置状态值</li>
+<li>通过Acccess Condition判断状态</li>
+<li>如果Access Condition为false，等待</li>
+<li>如果Access Condition为true，设置状态新值，必要时唤醒其他线程</li>
+</ol>
+<p><a href="http://tutorials.jenkov.com/java-concurrency/read-write-locks.html" target="_blank" rel="external">ReadWriteLock</a>中的lockWrite方法就是一个很典型的例子，该方法首先设置一个状态值(writeRequests++),随后调用canGrantWriteAccess方法，在该方法中的Access Condition判断状态，如果成功则状态会在lockWrite方法退出前被更新(writeRequests—;writeAccesses++)，注意到该方法并没有唤醒其他线程。</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> class ReadWriteLock&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="built_in">Map</span><span class="subst">&lt;</span><span class="keyword">Thread</span>, <span class="built_in">Integer</span><span class="subst">&gt;</span> readingThreads <span class="subst">=</span></span><br><span class="line">        <span class="literal">new</span> HashMap<span class="subst">&lt;</span><span class="keyword">Thread</span>, <span class="built_in">Integer</span><span class="subst">&gt;</span>();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> int writeAccesses    <span class="subst">=</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> int writeRequests    <span class="subst">=</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">Thread</span> writingThread <span class="subst">=</span> <span class="built_in">null</span>;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">...</span></span><br><span class="line"></span><br><span class="line">    </span><br><span class="line">        <span class="keyword">public</span> synchronized <span class="literal">void</span> lockWrite() throws InterruptedException&#123;</span><br><span class="line">        writeRequests<span class="subst">++</span>;</span><br><span class="line">        <span class="keyword">Thread</span> callingThread <span class="subst">=</span> <span class="keyword">Thread</span><span class="built_in">.</span>currentThread();</span><br><span class="line">        <span class="keyword">while</span>(<span class="subst">!</span> canGrantWriteAccess(callingThread))&#123;</span><br><span class="line">        wait();</span><br><span class="line">        &#125;</span><br><span class="line">        writeRequests<span class="subst">--</span>;</span><br><span class="line">        writeAccesses<span class="subst">++</span>;</span><br><span class="line">        writingThread <span class="subst">=</span> callingThread;</span><br><span class="line">        &#125;</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line">    <span class="attribute">...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Set_Method">Set Method</h3><p>Set method是同步块中经常使用的第二种方法，该方法就是在同步块中直接修改状态的的值而不会事先判断它，一个典型的例子就是unlock方法，持有锁的线程总是可以调用unlock方法并且不用去管该对象是否已经被解锁过了。</p>
+<p>Set Method的流程如下所示：</p>
+<ol>
+<li>更新状态</li>
+<li>唤醒等待线程</li>
+</ol>
+<p>下面就是unlock方法的例子:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>;</span><br><span class="line">  </span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">      isLocked = <span class="keyword">false</span>;</span><br><span class="line">      notify();</span><br><span class="line">      &#125;</span><br><span class="line">  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://yoursite.com/2015/05/11/译-java多线程与同步机制系列-26/" data-title="[译]java多线程与同步机制系列(26)--同步块的内部组成 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/05/10/译-java多线程与同步机制系列(25)/"  title="[译]java多线程与同步机制系列(25)--比较并交换">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制系列(25)--比较并交换
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/05/11/译-java多线程与同步机制系列-26/" data-title="[译]java多线程与同步机制系列(26)--同步块的内部组成" data-url="http://yoursite.com/2015/05/11/译-java多线程与同步机制系列-26/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#State"><span class="toc-number">1.</span> <span class="toc-text">State</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Access_Condition"><span class="toc-number">2.</span> <span class="toc-text">Access Condition</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#State_Changes"><span class="toc-number">3.</span> <span class="toc-text">State Changes</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Notification_Strategy"><span class="toc-number">4.</span> <span class="toc-text">Notification Strategy</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Test_and_Set_Method"><span class="toc-number">5.</span> <span class="toc-text">Test and Set Method</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Set_Method"><span class="toc-number">6.</span> <span class="toc-text">Set Method</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">归档</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">14</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+  </div>
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>26</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://www.csdn.net" target="_blank" title="CSDN">CSDN</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1685825420&verifier=f33b37d3&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> 大家好，我是朱家骅。 <br/>
+			欢迎来到我的技术博客！！！</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1685825420" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<a href="mailto:317560406@qq.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="朱家骅">朱家骅</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"flash03"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
