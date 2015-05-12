@@ -77,7 +77,152 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/05/11/译-java多线程与同步机制系列-26/" title="[译]java多线程与同步机制系列(26)--同步块的内部组成" itemprop="url">[译]java多线程与同步机制系列(26)--同步块的内部组成</a>
+      <a href="/2015/05/12/译-java多线程与同步机制系列(27)/" title="[译]java多线程与同步机制系列(27)--非阻塞算法" itemprop="url">[译]java多线程与同步机制系列(27)--非阻塞算法</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-12T01:57:08.000Z" itemprop="datePublished"> 发表于 2015-05-12</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/non-blocking-algorithms.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/non-blocking-algorithms.html</a>)</p>
+<p>多线程同步领域的非阻塞算法的作用是使多个线程访问共享资源时不会发生阻塞，通俗一点讲就是一个线程的阻塞不会导致其他线程的阻塞。</p>
+<p>为了更好的理解阻塞算法和非阻塞算法，我将首先讲解阻塞算法最后讲解非阻塞算法。<br><br></p>
+<h3 id="阻塞同步算法">阻塞同步算法</h3><p>阻塞同步算法会使某个线程执行操作并且阻塞另外一个尝试执行同样操作的线程。大部分同步算法和同步数据结构都是阻塞的，比如说<a href="http://tutorials.jenkov.com/java-util-concurrent/blockingqueue.html" target="_blank" rel="external">java.util.concurrent.BlockingQueue</a>接口的不同实现类全部都是阻塞数据结构，如果一个线程尝试向队列中插入数据，但是当前队列是满的，那么线程将被阻塞直到队列空出了空间存放数据。</p>
+<p>下图显示了阻塞同步算法应用在共享数据结构的行为：</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-1.png" alt="阻塞同步算法应用于共享数据结构"></p>
+<h3 id="非阻塞同步算法">非阻塞同步算法</h3><p>非阻塞同步算法使得某个线程执行操作不会阻塞尝试执行相同操作的线程，当前执行线程会通知其他线程当前无法执行操作。Java提供了很多非阻塞的数据结构，比如<a href="http://tutorials.jenkov.com/java-util-concurrent/atomicboolean.html" target="_blank" rel="external">AtomicBoolean</a>,<a href="http://tutorials.jenkov.com/java-util-concurrent/atomicinteger.html" target="_blank" rel="external">AtomicInteger</a>,<a href="http://tutorials.jenkov.com/java-util-concurrent/atomiclong.html" target="_blank" rel="external">AtomicLong</a>.</p>
+<p>下图显示了非阻塞算法应用在共享数据结构的行为:</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-2.png" alt="非阻塞同步算法应用于共享数据结构"></p>
+<h3 id="非阻塞算法_VS_阻塞算法">非阻塞算法 VS 阻塞算法</h3><p>非阻塞算法与阻塞算法的最大不同在于阻塞算法会阻塞其他线程而非阻塞算法将通知其他线程操作不可执行。</p>
+<p>阻塞算法会阻塞线程直到该线程请求的操作可以执行。通常一个线程执行请求的操作需要其他线程执行相关的操作，一旦由于某些原因其他线程被阻塞的话，那么该线程也将一直被阻塞直到其他线程最终启动执行必要的操作。比如说线程A向一个满的阻塞队列中插入数据时会发生阻塞直到其他线程从该队列中取出数据。如果由于某些原因其他线程被阻塞了，那么线程A将一直保持阻塞直到其他线程最终从该队列中提取数据。<br><br></p>
+<h3 id="非阻塞同步数据结构">非阻塞同步数据结构</h3><p>在多线程系统中，线程间都是通过一些数据结构进行通信。这些数据结构包括简单的数据类型和复杂数据结构如queues，maps，stacks等等。为了使多个线程能正确，同步的访问这些数据结构，那么它们就必须被同步算法守护，而这些同步算法就使得该数据结构成为了同步数据结构。</p>
+<p>如果守护算法会使线程阻塞的话，那么该算法就是阻塞算法，该数据结构就是阻塞同步数据结构。</p>
+<p>如果守护算法不会使线程阻塞的话，那么该算法就是非阻塞算法，该数据结构就是非阻塞同步数据结构。</p>
+<p>每一个同步数据结构都支持特定的线程通信方式，采用哪一种同步数据结构取决于具体的需求。接下来我将介绍几种非阻塞同步数据结构以及它们的应用场景，通过讲解这些非阻塞数据结构的工作机制可以让你了解它们的设计和实现原理。<br><br></p>
+<h3 id="Volatile变量">Volatile变量</h3><p>volatile变量将使线程直接从主存中读取该变量的值，当一个新值被赋给该变量时，那么这个新值将直接写到主存中。这就保证该变量的最新值对于其他线程是可见的，其他线程将直接从主存读取该变量的值而不是从CPU寄存器或CPU缓存中读取。</p>
+<p>Volatile变量是非阻塞的，对该变量的赋值是原子操作即无法被打断。但是对volatile变量的read-update-write操作却不是原子性的。因此如果有多个线程执行这个操作时就会发生竞争:</p>
+<figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">volatile <span class="variable">myVar =</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line">int <span class="variable">temp =</span> myVar;</span><br><span class="line">temp++;</span><br><span class="line"><span class="variable">myVar =</span> temp;</span><br></pre></td></tr></table></figure>
+<p>首先myVar的值从主存中读取并把值赋给了temp变量，然后temp加1，最后temp的值赋给myVar意味着这个新值被立即写到主存中的myVar变量上。</p>
+<p>如果两个线程执行上述代码的话，两个线程同时读取myVar的值，分别赋给该线程的temp变量，然后temp加1并将新值写入主存中，那么现在myVar的新值可能就是1而不是2了。</p>
+<p>你可能会说你不会写出这种代码，但是你要注意上面的代码与下面这句代码是等效的:</p>
+<figure class="highlight brainfuck"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">myVar</span><span class="literal">+</span><span class="literal">+</span><span class="comment">;</span></span><br></pre></td></tr></table></figure>
+<p>当执行上面这句代码时，myVar的值被加载到CPU缓存或者寄存器中，然后执行加1操作并将新值写入主存中。<br><br></p>
+<h4 id="单写线程的例子">单写线程的例子</h4><p>在某些情况下对于某个共享数据只有一个写线程和多个读线程，那么当写线程更新该数据并且多个读线程读取该数据就不会发生竞争。在这种情况下你可以使用volatile变量。</p>
+<p>竞争只会发生在多个线程对同一个共享对象执行read-update-set操作，如果你只有一个线程执行该操作，其他线程都只是读取该共享对象的值的话就不会发生竞争。</p>
+<p>下面是一个Counter类，它没有使用同步块但仍然是同步的因为只有一个写线程对其执行更新计数操作：</p>
+<figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">public class <span class="type">SingleWriterCounter</span> &#123;</span><br><span class="line"></span><br><span class="line">    private volatile long count = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Only</span> one thread may ever call this <span class="keyword">method</span>,</span><br><span class="line">     * <span class="keyword">or</span> it will lead to race conditions.</span><br><span class="line">     */</span><br><span class="line">    public <span class="type">void</span> inc() &#123;</span><br><span class="line">        this.count++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Many</span> reading threads may call this <span class="keyword">method</span></span><br><span class="line">     * @<span class="keyword">return</span></span><br><span class="line">     */</span><br><span class="line">    public long count() &#123;</span><br><span class="line">        <span class="keyword">return</span> this.count;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>多个线程同时访问这个counter类对象，但其中只有一个线程调用inc方法。这里的一个线程指的是同一个线程，多个线程可以同时调用count方法，这种情况不会发生竞争。</p>
+<p>下图显示了多个线程如何操作该counter对象：</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-3.png" alt="多个线程操作counter对象"></p>
+<h4 id="更多基于volatile变量的复杂数据结构">更多基于volatile变量的复杂数据结构</h4><p>我们也可以创建包含多个volatile变量的数据结构，其中每个volatile变量只准被同一个线程修改但可以被多个线程读取，这里的同一个线程是指每个volatile变量都可以被一个不同的线程修改，比如说A变量可以被线程1修改且只允许被线程1修改。使用这种数据结构就允许多个线程以非阻塞方式执行。</p>
+<p>下面的Counter类就允许多个写线程执行：</p>
+<figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">public class <span class="type">DoubleWriterCounter</span> &#123;</span><br><span class="line"></span><br><span class="line">    private volatile long countA = <span class="number">0</span>;</span><br><span class="line">    private volatile long countB = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Only</span> one (<span class="keyword">and</span> the same <span class="keyword">from</span> thereon) thread may ever call this <span class="keyword">method</span>,</span><br><span class="line">     * <span class="keyword">or</span> it will lead to race conditions.</span><br><span class="line">     */</span><br><span class="line">    public <span class="type">void</span> incA() &#123; this.countA++;  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Only</span> one (<span class="keyword">and</span> the same <span class="keyword">from</span> thereon) thread may ever call this <span class="keyword">method</span>,</span><br><span class="line">     * <span class="keyword">or</span> it will lead to race conditions.</span><br><span class="line">     */</span><br><span class="line">    public <span class="type">void</span> incB() &#123; this.countB++;  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Many</span> reading threads may call this <span class="keyword">method</span></span><br><span class="line">     */</span><br><span class="line">    public long countA() &#123; <span class="keyword">return</span> this.countA; &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Many</span> reading threads may call this <span class="keyword">method</span></span><br><span class="line">     */</span><br><span class="line">    public long countB() &#123; <span class="keyword">return</span> this.countB; &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>正如你所见，DoubleWriterCounter类有两个volatile变量以及两对inc方法和count方法。这里只允许一个线程调用incA方法，一个线程调用incB方法。这样该类就允许两个线程同时调用incA和incB方法，其他线程调用countA和countB方法，这不会引起竞争。</p>
+<p>这个DoubleWriterCounter类可以用于两个线程之间的通信。countA和countB可以表示任务的产生和执行数量。下图显示了两个线程如何利用DoubleWriterCounter类进行交互:</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-4.png" alt="线程交互"></p>
+<p>细心的读者可能会发现DoubleWriterCounter类的功能也可以由两个SingleWriterCounter来实现。你可以根据你的需求使用任意数量的SingleWriterCounter。<br><br></p>
+<h3 id="基于乐观锁的CAS">基于乐观锁的CAS</h3><p>如果现在有多个线程需要对共享对象进行写操作，则单纯依靠volatile变量就不可行。你可能需要对变量的访问进行控制，做法是使用synchronized同步块:</p>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> SynchronizedCounter &#123;</span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">count</span> = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> inc() &#123;</span><br><span class="line">        <span class="keyword">synchronized</span>(<span class="keyword">this</span>) &#123;</span><br><span class="line">            <span class="keyword">count</span>++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">long</span> <span class="keyword">count</span>() &#123;</span><br><span class="line">        <span class="keyword">synchronized</span>(<span class="keyword">this</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>.<span class="keyword">count</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意到inc方法和count方法都是同步方法，但是我们希望避免使用synchronized关键字和wait-notify方法。在这里我们可以采用java提供的原子变量，现在我们就用AtomicLong来改写上面的Counter类:</p>
+<figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">import java.util.concurrent.atomic.AtomicLong;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AtomicCounter</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> AtomicLong <span class="keyword">count</span> = <span class="keyword">new</span> AtomicLong(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> inc() &#123;</span><br><span class="line">        <span class="keyword">boolean</span> updated = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">while</span>(!updated)&#123;</span><br><span class="line">            <span class="keyword">long</span> prevCount = <span class="keyword">this</span>.<span class="keyword">count</span>.get();</span><br><span class="line">            updated = <span class="keyword">this</span>.<span class="keyword">count</span>.compareAndSet(prevCount, prevCount + <span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">long</span> <span class="keyword">count</span>() &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.<span class="keyword">count</span>.get();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个版本的Counter相比上一个版本来说是线程安全的。这个版本中我们感兴趣的是inc方法的实现，inc方法没有使用synchronized同步块，而是如下几行代码:</p>
+<figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">boolean</span> updated = <span class="keyword">false</span>;</span><br><span class="line"><span class="keyword">while</span>(!updated)&#123;</span><br><span class="line">    <span class="keyword">long</span> prevCount = <span class="keyword">this</span>.<span class="keyword">count</span>.get();</span><br><span class="line">    updated = <span class="keyword">this</span>.<span class="keyword">count</span>.compareAndSet(prevCount, prevCount + <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面几行不是原子操作，这就意味着可以有两个不同的线程同时调用inc方法并且执行long preCount = this.count.get()方法，这样两个线程都获取了当前count的值，现在还没有发生竞争。</p>
+<p>秘密就在while循环的第二行，compareAndSet方法是一个原子方法，它比较当前值和期望值，如果两个值相等，则将新值赋给count对象。compareAndSet方法就是典型的被CPU CAS指令直接支持的方法，因此在这里没有必要使用同步算法并且没有线程会被阻塞，这就降低了线程阻塞造成的性能损失。</p>
+<p>假设当前count值为20，现在两个线程同时获取了该count值并且调用compareAndSet(20,20+1)，由于compareAndSet方法是原子方法，那么两个线程将相继执行该方法。</p>
+<p>首先第一个线程将比较当前值(20)是否与期望值(20)相等,很显然现在确实相等，所以count被赋予了新值21并且updated设置为true，该线程退出while循环。</p>
+<p>现在第二个线程调用compareAndSet(20,21),由于现在count的当前值是21了，所以这个调用会失败，updated依然为false，那么循环继续。下一次循环中第二个线程重新获取count的值为21，现在它将再次调用compareAndSet(21,22)，现在调用就会成功，并且count的值变为22，如果没有其他线程调用inc方法的话，count的最终值将为22.<br><br></p>
+<h4 id="为什么叫做乐观锁">为什么叫做乐观锁</h4><p>上一节中的代码就叫做乐观锁，乐观锁与传统的锁机制不同，它有时候也叫做悲观锁。传统的锁会通过同步块或者其他锁方法而使线程阻塞。乐观锁就允许所有线程获得共享对象的拷贝而不会发生阻塞，随后线程对拷贝对象做修改随后尝试将修改后的新值写回到共享对象中去。如果现在没有其他贤臣对该对象做出修改，那么该修改线程可以通过CAS操作将新值写回到共享对象中，如果其他线程已经对对象做出了修改的话，那么该线程就将获得一份新的拷贝，然后对拷贝作出修改并重新写回到对象中去。</p>
+<p>之所以叫做乐观锁是因为每个线程都获得了共享对象的一份拷贝并对其做出修改，然后将其写回到共享对象上去。基于没有其他线程对对象做出修改这个乐观假设，如果这个假设成立，则线程可以将修改写回到对象中，如果假设不成立，则整个操作作废，但是却没有线程被阻塞。</p>
+<p>乐观锁适用于在共享对象上有较低或中等的争议点的情形。如果争议点很多的话线程就会花费大量的CPU时间和内存获取共享对象的拷贝并对其做出修改，但是由于争议点很多使得此次修改无法写回到共享对象上。所以在使用乐观锁时，如果共享对象上有很多争议点的话我们应该想办法减少争议点。<br><br></p>
+<h4 id="乐观锁是非阻塞的">乐观锁是非阻塞的</h4><p>上面所讲的乐观锁是非阻塞的。如果一个线程获取了共享对象的拷贝并且在修改对象值的时候被阻塞了，但不会影响其他线程访问共享对象。</p>
+<p>在传统的上锁/解锁实例中，一个线程获取了某对象的锁后其他试图访问该对象的线程都会被阻塞，如果持有该对象锁的线程被阻塞的话，那么其他线程将一直被阻塞下去，有可能是永久阻塞。<br><br></p>
+<h3 id="非可交换数据结构">非可交换数据结构</h3><p>简单的CAS乐观锁适合于共享对象可以被一个新的值交换的情况。但是有时候交换整个共享对象的数据结构不切实际并且缺乏灵活性。</p>
+<p>想像一下共享对象是一个队列的话，每个线程如果想对队列中某个数据进行修改的话都将获取一份完整的队列的拷贝然后对拷贝做相应的修改。这可以通过AtomicReference来实现，首先获取这个reference，然后拷贝整个队列并做出修改，然后将reference引用指向新创建的队列。</p>
+<p>然而，一个很大的数据结构的拷贝需要大量的内存和CPU时间，这将使你的程序消耗大量的计算机资源，如果数据结构上的争议点很多的话问题更严重。更要命的是，线程拷贝和修改对象的时间越长，那么其他线程已经对该对象做出修改的可能性就越高，这样线程的拷贝以及修改就全部作废并需要重新拷贝新的数据，这将大大增加程序的内存和CPU消耗。</p>
+<p>下一章将介绍一种实现非阻塞数据结构的方法可以使得线程同步更新而不仅仅是拷贝和修改。<br><br></p>
+<h3 id="共享目标修改对象(Sharing_Intended_Modifications)">共享目标修改对象(Sharing Intended Modifications)</h3><p>现在线程不会拷贝和修改整个共享对象，而是会共享关于共享对象的目标修改对象。那么线程想对共享对象做出修改的话就按照如下流程：</p>
+<ol>
+<li>检查是否有其他对象对共享对象提交了目标修改</li>
+<li>如果没有的话，创建一个目标修改(就是一个普通对象),然后调剂这个目标修改给共享对象(通过CAS操作)</li>
+<li>在共享对象上实施目标修改</li>
+<li>移除该目标修改对象的引用来向其他线程发送信号表示对象已执行修改。</li>
+</ol>
+<p>正如你所看见的，第二步将阻塞其他线程提交目标修改对象，也就相当于对共享数据结构上锁。如果一个线程提交了目标修改对象的话，其他线程只能等到第一个提交的目标修改对象被执行才能提交目标修改对象。</p>
+<p>如果一个线程提交了目标修改对象后在执行修改操作时被阻塞的话，共享数据结构就被上锁了。共享的数据结构不会直接阻塞线程，线程检测到它们不能提交目标修改时可以执行其他操作，很显然这是我们需要完善的地方。<br><br></p>
+<h4 id="可完成的目标修改对象">可完成的目标修改对象</h4><p>为了防止提交的目标修改阻塞共享数据结构，目标修改必须包含足够的信息给其他线程来完成修改。因此如果提交了目标修改对象的线程没有完成修改的话，其他线程可以代表它继续完成修改并且使得共享对象可以继续被其他线程使用。</p>
+<p>下图描述了上面描述的非阻塞算法:</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-5.png" alt="非阻塞算法"></p>
+<p>修改必须由一个或多个CAS操作来完成，如果两个线程试图在共享对象上实施目标修改的话，只有一个线程可以执行CAS操作来执行修改，而第一个线程执行修改完成后另一个线程尝试执行CAS操作的话就会失败。<br><br></p>
+<h3 id="A-B-A问题">A-B-A问题</h3><p>上面的算法会导致A-B-A问题，意思是变量的值从A变为B又变回了A，其他线程察觉不到这个变化。</p>
+<p>比如线程A检查当前正在执行的修改，如果当前没有修改的话线程A将拷贝数据，此时线程调度器暂停了线程A的执行并开启线程B，那么线程B此时也可以拷贝相同的数据，并对该数据结构执行了一次完整的修改，最后移除了对目标修改对象的引用。随后线程A继续执行，但是线程B对数据的修改没有通知到线程A，线程A认为数据没有被修改，但数据已经被线程B修改过了，此时线程A所拷贝的数据已经过时了，所以线程A的执行结果会覆盖线程B的执行结果。</p>
+<p>下图显示了A-B-A问题的场景:</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-6.png" alt="A-B-A问题"></p>
+<h4 id="A-B-A问题的解决方式">A-B-A问题的解决方式</h4><p>解决A-B-A问题的通用方法是不仅仅只交换目标修改对象的指针，而是将指针与一个计数器相结合，这样即使目标修改对象的指针归位，但是计数器的值不为0则表示数据已经被修改了，这样可以使这次修改对其他线程可见。</p>
+<p>在java中提供了<a href="http://tutorials.jenkov.com/java-util-concurrent/atomicstampedreference.html" target="_blank" rel="external">AtomicStampedReference</a>类，该类可以利用CAS操作交换一个引用和一个版本戳。<br><br></p>
+<h3 id="一个非阻塞算法的示例">一个非阻塞算法的示例</h3><p>下面就是一个非阻塞算法的代码实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.util.concurrent.atomic.AtomicBoolean;</span><br><span class="line"><span class="keyword">import</span> java.util.concurrent.atomic.AtomicStampedReference;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NonblockingTemplate</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">IntendedModification</span> </span>&#123;</span><br><span class="line">        <span class="keyword">public</span> AtomicBoolean completed =</span><br><span class="line">                <span class="keyword">new</span> AtomicBoolean(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> AtomicStampedReference&lt;IntendedModification&gt;</span><br><span class="line">        ongoingMod =</span><br><span class="line">            <span class="keyword">new</span> AtomicStampedReference&lt;IntendedModification&gt;(<span class="keyword">null</span>, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//declare the state of the data structure here.</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">modify</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span>(!attemptModifyASR());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">attemptModifyASR</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">boolean</span> modified = <span class="keyword">false</span>;</span><br><span class="line">    </span><br><span class="line">        IntendedModification currentlyOngoingMod =</span><br><span class="line">        ongoingMod.getReference();</span><br><span class="line">        <span class="keyword">int</span> stamp = ongoingMod.getStamp();</span><br><span class="line">    </span><br><span class="line">        <span class="keyword">if</span>(currentlyOngoingMod == <span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="comment">//copy data structure state - for use</span></span><br><span class="line">            <span class="comment">//in intended modification</span></span><br><span class="line">        </span><br><span class="line">            <span class="comment">//prepare intended modification</span></span><br><span class="line">            IntendedModification newMod =</span><br><span class="line">            <span class="keyword">new</span> IntendedModification();</span><br><span class="line">        </span><br><span class="line">            <span class="keyword">boolean</span> modSubmitted = </span><br><span class="line">                ongoingMod.compareAndSet(<span class="keyword">null</span>, newMod, stamp, stamp + <span class="number">1</span>);</span><br><span class="line">        </span><br><span class="line">            <span class="keyword">if</span>(modSubmitted)&#123;</span><br><span class="line">            </span><br><span class="line">                <span class="comment">//complete modification via a series of compare-and-swap operations.</span></span><br><span class="line">                <span class="comment">//note: other threads may assist in completing the compare-and-swap</span></span><br><span class="line">                <span class="comment">// operations, so some CAS may fail</span></span><br><span class="line">            </span><br><span class="line">                modified = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">    </span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">//attempt to complete ongoing modification, so the data structure is freed up</span></span><br><span class="line">            <span class="comment">//to allow access from this thread.</span></span><br><span class="line">        </span><br><span class="line">            modified = <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    </span><br><span class="line">        <span class="keyword">return</span> modified;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h3 id="非阻塞算法实现困难">非阻塞算法实现困难</h3><p>非阻塞算法很难设计与实现，在尝试自己设计非阻塞算法前可以先去搜索一下是否有人已经实现了正确的非阻塞算法。Java提供了很多非阻塞算法的实现，比如CocurrentLinkedQueue，以后也会提供更多的非阻塞算法的实现。</p>
+<p>除了java提供的算法实现，其他第三方也提供了很多非阻塞的算法实现，比如LMAX Disruptor。更多介绍可以参考<a href="http://tutorials.jenkov.com/java-concurrency/references.html" target="_blank" rel="external">Java concurrency references page</a>这篇博客。<br><br></p>
+<h3 id="非阻塞算法的优点">非阻塞算法的优点</h3><p>非阻塞算法有很多的优点，下面重点讲一下以下几个优点。</p>
+<ol>
+<li>当线程请求操作无法被执行时，我们可以定义这种情况下线程可以执行的操作而不是阻塞等待。</li>
+<li>不会发生死锁</li>
+<li>没有线程阻塞</li>
+<li>减少线程延迟</li>
+</ol>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/05/12/译-java多线程与同步机制系列(27)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/05/12/译-java多线程与同步机制系列(27)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/05/11/译-java多线程与同步机制系列(26)/" title="[译]java多线程与同步机制系列(26)--同步块的内部组成" itemprop="url">[译]java多线程与同步机制系列(26)--同步块的内部组成</a>
   </h1>
   <p class="article-author">By
        
@@ -173,7 +318,7 @@
 <div class="comments-count">
 	
 	  	<span></span>
-		<a href="/2015/05/11/译-java多线程与同步机制系列-26/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/05/11/译-java多线程与同步机制系列-26/" data-count-type="comments">&nbsp;</a>
+		<a href="/2015/05/11/译-java多线程与同步机制系列(26)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/05/11/译-java多线程与同步机制系列(26)/" data-count-type="comments">&nbsp;</a>
 	
 </div>
 
@@ -896,82 +1041,6 @@
 
 
 
-   
-    
-    <article class="post-expand post" itemprop="articleBody"> 
-        <header class="article-info clearfix">
-  <h1 itemprop="name">
-    
-      <a href="/2015/05/05/译-java多线程与同步机制系列(17)/" title="[译]java多线程与同步机制系列(17)--嵌套管程锁死" itemprop="url">[译]java多线程与同步机制系列(17)--嵌套管程锁死</a>
-  </h1>
-  <p class="article-author">By
-       
-		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
-		
-  <p class="article-time">
-    <time datetime="2015-05-05T00:27:58.000Z" itemprop="datePublished"> 发表于 2015-05-05</time>
-    
-  </p>
-</header>
-    <div class="article-content">
-        
-        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/nested-monitor-lockout.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/nested-monitor-lockout.html</a>)</p>
-<h3 id="嵌套管程锁死的起因">嵌套管程锁死的起因</h3><p>嵌套管程锁死的情况和死锁非常类似，下面是一个嵌套管程锁死的例子：</p>
-<figure class="highlight livecodeserver"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Thread <span class="number">1</span> synchronizes <span class="command"><span class="keyword">on</span> <span class="title">A</span></span></span><br><span class="line">Thread <span class="number">1</span> synchronizes <span class="command"><span class="keyword">on</span> <span class="title">B</span> (<span class="title">while</span> <span class="title">synchronized</span> <span class="title">on</span> <span class="title">A</span>)</span></span><br><span class="line">Thread <span class="number">1</span> decides <span class="built_in">to</span> <span class="built_in">wait</span> <span class="keyword">for</span> <span class="operator">a</span> signal <span class="built_in">from</span> another thread <span class="keyword">before</span> continuing</span><br><span class="line">Thread <span class="number">1</span> calls B.<span class="built_in">wait</span>() thereby releasing <span class="operator">the</span> lock <span class="command"><span class="keyword">on</span> <span class="title">B</span>, <span class="title">but</span> <span class="title">not</span> <span class="title">A</span>.</span></span><br><span class="line"></span><br><span class="line">Thread <span class="number">2</span> needs <span class="built_in">to</span> lock both A <span class="operator">and</span> B (<span class="operator">in</span> that sequence)</span><br><span class="line">        <span class="built_in">to</span> <span class="built_in">send</span> Thread <span class="number">1</span> <span class="operator">the</span> signal.</span><br><span class="line">Thread <span class="number">2</span> cannot lock A, since Thread <span class="number">1</span> still holds <span class="operator">the</span> lock <span class="command"><span class="keyword">on</span> <span class="title">A</span>.</span></span><br><span class="line">Thread <span class="number">2</span> remain blocked indefinately waiting <span class="keyword">for</span> Thread1</span><br><span class="line">        <span class="built_in">to</span> release <span class="operator">the</span> lock <span class="command"><span class="keyword">on</span> <span class="title">A</span></span></span><br><span class="line"></span><br><span class="line">Thread <span class="number">1</span> remain blocked indefinately waiting <span class="keyword">for</span> <span class="operator">the</span> signal <span class="built_in">from</span></span><br><span class="line">        Thread <span class="number">2</span>, thereby</span><br><span class="line">        never releasing <span class="operator">the</span> lock <span class="command"><span class="keyword">on</span> <span class="title">A</span>, <span class="title">that</span> <span class="title">must</span> <span class="title">be</span> <span class="title">released</span> <span class="title">to</span> <span class="title">make</span></span></span><br><span class="line">        <span class="keyword">it</span> possible <span class="keyword">for</span> Thread <span class="number">2</span> <span class="built_in">to</span> <span class="built_in">send</span> <span class="operator">the</span> signal <span class="built_in">to</span> Thread <span class="number">1</span>, etc.</span><br></pre></td></tr></table></figure>
-<p>这可能看上去像一个空想的场景，但是看看下面这个Lock类你就明白了：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//lock implementation with nested monitor lockout problem</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Lock</span></span>&#123;</span><br><span class="line">  <span class="keyword">protected</span> MonitorObject monitorObject = <span class="keyword">new</span> MonitorObject();</span><br><span class="line">  <span class="keyword">protected</span> <span class="keyword">boolean</span> isLocked = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">      <span class="keyword">while</span>(isLocked)&#123;</span><br><span class="line">        <span class="keyword">synchronized</span>(<span class="keyword">this</span>.monitorObject)&#123;</span><br><span class="line">            <span class="keyword">this</span>.monitorObject.wait();</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      isLocked = <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">      <span class="keyword">this</span>.isLocked = <span class="keyword">false</span>;</span><br><span class="line">      <span class="keyword">synchronized</span>(<span class="keyword">this</span>.monitorObject)&#123;</span><br><span class="line">        <span class="keyword">this</span>.monitorObject.notify();</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>注意到lock方法中先对this上锁，随后对monitorObject上锁，如果isLocked为false的话这种设计没有一点问题，因为线程不会调用monitorObject.wait方法，但是一旦isLocked为true，那么该线程就会调用monitorObjecy.wait方法进入等待。那么问题来了，monitorObject.wait方法的调用只会释放对monitorObject对象的锁，它并没有释放对this也就是lock对象的锁。换句话说，进入等待状态的线程依然持有this对象的锁没有释放。</p>
-<p>当一个已经对Lock上锁的线程尝试unlock时，它将在进入unlock方法的synchronized(this)代码块时被阻塞并将一直等待直到lock方法中的等待线程离开synchronized(this)代码块。但是lock方法中的等待线程只有当isLocked为false时才会离开synchronized代码块，而这个操作需要在unlock方法中完成。</p>
-<p>简而言之就是说，lock方法中的等待线程需要某个线程执行unlock方法才能使等待线程退出lock方法，但是没有任何线程可以在等待线程退出lock方法前执行unlock方法。</p>
-<p>这种情况的结果是任何线程调用lock方法或者unlock方法都将进入无限期的等待状态，这就叫做嵌套管程锁死。<br><br></p>
-<h3 id="更加现实的例子">更加现实的例子</h3><p>你可能会说你绝对不会写出像上面一样的Lock类的，你绝不会在监视器上调用wait方法或者notify方法而是在This对象上调用。但是有些情况下就需要与上面Lock类类似的锁，比如说你想实现一个公平锁，你需要每个线程在对应的QueueObject对象上调用wait方法，这样你才能一次notify一个线程。</p>
-<p>下面我们来看看一个公平锁的实现：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//Fair Lock implementation with nested monitor lockout problem</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FairLock</span> </span>&#123;</span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">boolean</span>           isLocked       = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">private</span> Thread            lockingThread  = <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">private</span> List&lt;QueueObject&gt; waitingThreads =</span><br><span class="line">            <span class="keyword">new</span> ArrayList&lt;QueueObject&gt;();</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException</span>&#123;</span><br><span class="line">    QueueObject queueObject = <span class="keyword">new</span> QueueObject();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">synchronized</span>(<span class="keyword">this</span>)&#123;</span><br><span class="line">      waitingThreads.add(queueObject);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">while</span>(isLocked || waitingThreads.get(<span class="number">0</span>) != queueObject)&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">synchronized</span>(queueObject)&#123;</span><br><span class="line">          <span class="keyword">try</span>&#123;</span><br><span class="line">            queueObject.wait();</span><br><span class="line">          &#125;<span class="keyword">catch</span>(InterruptedException e)&#123;</span><br><span class="line">            waitingThreads.remove(queueObject);</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      waitingThreads.remove(queueObject);</span><br><span class="line">      isLocked = <span class="keyword">true</span>;</span><br><span class="line">      lockingThread = Thread.currentThread();</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">unlock</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(<span class="keyword">this</span>.lockingThread != Thread.currentThread())&#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException(</span><br><span class="line">        <span class="string">"Calling thread has not locked this lock"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    isLocked      = <span class="keyword">false</span>;</span><br><span class="line">    lockingThread = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span>(waitingThreads.size() &gt; <span class="number">0</span>)&#123;</span><br><span class="line">      QueueObject queueObject = waitingThread.get(<span class="number">0</span>);</span><br><span class="line">      <span class="keyword">synchronized</span>(queueObject)&#123;</span><br><span class="line">        queueObject.notify();</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<figure class="highlight actionscript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QueueObject</span> </span>&#123;&#125;</span><br></pre></td></tr></table></figure>
-<p>第一眼看上去这个FairLock没有什么问题，但是仔细检查的话你会发现lock方法中是在两个嵌套的同步块内部调用的queueObject.wait方法的。一个是this同步块，另外一个是queueObject同步块。当一个线程调用queueObject.wait方法时它释放了queueObject对象的锁，但是没有释放this对象的锁。</p>
-<p>同时我们也注意到，unlock方法是有synchronized关键字修饰的，这也就相当于一个synchronized(this)代码块。这样如果一个线程在lock方法中进入等待状态的话，那么它将持有this对象的锁，那么其他所有调用unlock方法的线程都将被无限期的阻塞直到等待线程释放this对象的锁，我们都知道这是不可能发生的，因为要想发生，就必须有一个线程发送信号给等待线程，而这个发送操作必须在unlock方法中进行。</p>
-<p>所以，上述的FairLock类将导致嵌套管程锁死。关于公平锁的另一个更好的实现在将饥饿与公平的时候已经提到，感兴趣的可以前往那篇博客查看。<br><br></p>
-<h3 id="嵌套管程锁死_VS_死锁">嵌套管程锁死 VS 死锁</h3><p>嵌套管程锁死的结果和死锁非常类似：线程都将因对方而陷入无限期的等待状态。</p>
-<p>但是这两种情况也不是完全一样，我们之前提到，死锁发生在多个线程以不同的顺序获取锁的情形，比如线程1持有A对象的锁，尝试获取B对象的锁，线程2持有B对象的锁，尝试获取A对象的锁。我们在死锁预防章节中提到过我们可以确保线程获取锁的顺序来防止死锁。然而，嵌套管程锁死就是发生在线程以固定顺序获取锁的情形。线程1持有对象A和B的锁，现在它释放B的锁然后等待线程2给它发信号，而线程2需要对象A和B的锁才能给线程1发信号，所以现在就成了一个线程在等待信号，另一个线程在等待锁被释放的锁死情形。</p>
-<p>嵌套管程锁死和死锁的区别总结如下：</p>
-<figure class="highlight livecodeserver"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">In deadlock, <span class="constant">two</span> threads are waiting <span class="keyword">for</span> <span class="keyword">each</span> other <span class="built_in">to</span> release locks.</span><br><span class="line"></span><br><span class="line">In nested monitor lockout, Thread <span class="number">1</span> is holding <span class="operator">a</span> lock A, <span class="operator">and</span> waits</span><br><span class="line"><span class="keyword">for</span> <span class="operator">a</span> signal <span class="built_in">from</span> Thread <span class="number">2.</span> Thread <span class="number">2</span> needs <span class="operator">the</span> lock A <span class="built_in">to</span> <span class="built_in">send</span> <span class="operator">the</span></span><br><span class="line">signal <span class="built_in">to</span> Thread <span class="number">1.</span></span><br></pre></td></tr></table></figure>
-        
-        
-        <p class="article-more-link">
-          
-       </p>
-    </div>
-    <footer class="article-footer clearfix">
-<div class="article-catetags">
-
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
-</div>
-
-
-</div>
-
-
-
-
-<div class="comments-count">
-	
-	  	<span></span>
-		<a href="/2015/05/05/译-java多线程与同步机制系列(17)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/05/05/译-java多线程与同步机制系列(17)/" data-count-type="comments">&nbsp;</a>
-	
-</div>
-
-</footer>
-
-
-    </article>
-
-
-
-
-
-
 
   <nav id="page-nav" class="clearfix">
     <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/2/">Next<span></span></a>
@@ -987,7 +1056,7 @@
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">14</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
   </div>
 
 
@@ -997,7 +1066,7 @@
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>26</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>27</sup></a></li>
 		  
 		
 		  

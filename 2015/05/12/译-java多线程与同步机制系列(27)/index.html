@@ -1,0 +1,527 @@
+
+ <!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  
+    <title>[译]java多线程与同步机制系列(27)--非阻塞算法 | 朱家骅的Blog</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1,user-scalable=no">
+    
+    <meta name="author" content="朱家骅">
+    
+
+    
+    <meta name="description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/non-blocking-algorithms.html)
+多线程同步领域的非阻塞算法的作用是使多个线程访问共享资源时不会发生阻塞，通俗一点讲就是一个线程的阻塞不会导致其他线程的阻塞。
+为了更好的理解阻塞算法和非阻塞算法，我将首先讲解阻塞算法最后讲解非阻塞算法。
+阻塞同步算法阻塞同步算法会使某个线程">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译]java多线程与同步机制系列(27)--非阻塞算法">
+<meta property="og:url" content="http://yoursite.com/2015/05/12/译-java多线程与同步机制系列(27)/index.html">
+<meta property="og:site_name" content="朱家骅的Blog">
+<meta property="og:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/non-blocking-algorithms.html)
+多线程同步领域的非阻塞算法的作用是使多个线程访问共享资源时不会发生阻塞，通俗一点讲就是一个线程的阻塞不会导致其他线程的阻塞。
+为了更好的理解阻塞算法和非阻塞算法，我将首先讲解阻塞算法最后讲解非阻塞算法。
+阻塞同步算法阻塞同步算法会使某个线程">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-1.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-2.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-3.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-4.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-5.png">
+<meta property="og:image" content="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-6.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="[译]java多线程与同步机制系列(27)--非阻塞算法">
+<meta name="twitter:description" content="原文链接(http://tutorials.jenkov.com/java-concurrency/non-blocking-algorithms.html)
+多线程同步领域的非阻塞算法的作用是使多个线程访问共享资源时不会发生阻塞，通俗一点讲就是一个线程的阻塞不会导致其他线程的阻塞。
+为了更好的理解阻塞算法和非阻塞算法，我将首先讲解阻塞算法最后讲解非阻塞算法。
+阻塞同步算法阻塞同步算法会使某个线程">
+
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/jacman.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/jacman.jpg">
+    
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+</head>
+
+  <body>
+    <header>
+      
+<div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="朱家骅的Blog">朱家骅的Blog</a></h1>
+				<h2 class="blog-motto">把流行的技术挂在嘴边，不如把过时的技术记在心里</h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="菜单">
+			</a></div>
+			<nav class="animated">
+				<ul>
+					<ul>
+					 
+						<li><a href="/">主页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="/categories">分类</a></li>
+					
+						<li><a href="/about">关于</a></li>
+					
+					<li>
+ 					
+					<form class="search" action="//google.com/search" method="get" accept-charset="utf-8">
+						<label>Search</label>
+						<input type="search" id="search" name="q" autocomplete="off" maxlength="20" placeholder="搜索" />
+						<input type="hidden" name="q" value="site:yoursite.com">
+					</form>
+					
+					</li>
+				</ul>
+			</nav>			
+</div>
+    </header>
+    <div id="container">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+  
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/05/12/译-java多线程与同步机制系列(27)/" title="[译]java多线程与同步机制系列(27)--非阻塞算法" itemprop="url">[译]java多线程与同步机制系列(27)--非阻塞算法</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-05-12T01:57:08.000Z" itemprop="datePublished"> 发表于 2015-05-12</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">文章目录</strong>
+		
+			<ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#阻塞同步算法"><span class="toc-number">1.</span> <span class="toc-text">阻塞同步算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞同步算法"><span class="toc-number">2.</span> <span class="toc-text">非阻塞同步算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞算法_VS_阻塞算法"><span class="toc-number">3.</span> <span class="toc-text">非阻塞算法 VS 阻塞算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞同步数据结构"><span class="toc-number">4.</span> <span class="toc-text">非阻塞同步数据结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Volatile变量"><span class="toc-number">5.</span> <span class="toc-text">Volatile变量</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#单写线程的例子"><span class="toc-number">5.1.</span> <span class="toc-text">单写线程的例子</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#更多基于volatile变量的复杂数据结构"><span class="toc-number">5.2.</span> <span class="toc-text">更多基于volatile变量的复杂数据结构</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基于乐观锁的CAS"><span class="toc-number">6.</span> <span class="toc-text">基于乐观锁的CAS</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#为什么叫做乐观锁"><span class="toc-number">6.1.</span> <span class="toc-text">为什么叫做乐观锁</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#乐观锁是非阻塞的"><span class="toc-number">6.2.</span> <span class="toc-text">乐观锁是非阻塞的</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非可交换数据结构"><span class="toc-number">7.</span> <span class="toc-text">非可交换数据结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#共享目标修改对象(Sharing_Intended_Modifications)"><span class="toc-number">8.</span> <span class="toc-text">共享目标修改对象(Sharing Intended Modifications)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#可完成的目标修改对象"><span class="toc-number">8.1.</span> <span class="toc-text">可完成的目标修改对象</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#A-B-A问题"><span class="toc-number">9.</span> <span class="toc-text">A-B-A问题</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#A-B-A问题的解决方式"><span class="toc-number">9.1.</span> <span class="toc-text">A-B-A问题的解决方式</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#一个非阻塞算法的示例"><span class="toc-number">10.</span> <span class="toc-text">一个非阻塞算法的示例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞算法实现困难"><span class="toc-number">11.</span> <span class="toc-text">非阻塞算法实现困难</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞算法的优点"><span class="toc-number">12.</span> <span class="toc-text">非阻塞算法的优点</span></a></li></ol>
+		
+		</div>
+		
+		<p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/non-blocking-algorithms.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/non-blocking-algorithms.html</a>)</p>
+<p>多线程同步领域的非阻塞算法的作用是使多个线程访问共享资源时不会发生阻塞，通俗一点讲就是一个线程的阻塞不会导致其他线程的阻塞。</p>
+<p>为了更好的理解阻塞算法和非阻塞算法，我将首先讲解阻塞算法最后讲解非阻塞算法。<br><br></p>
+<h3 id="阻塞同步算法">阻塞同步算法</h3><p>阻塞同步算法会使某个线程执行操作并且阻塞另外一个尝试执行同样操作的线程。大部分同步算法和同步数据结构都是阻塞的，比如说<a href="http://tutorials.jenkov.com/java-util-concurrent/blockingqueue.html" target="_blank" rel="external">java.util.concurrent.BlockingQueue</a>接口的不同实现类全部都是阻塞数据结构，如果一个线程尝试向队列中插入数据，但是当前队列是满的，那么线程将被阻塞直到队列空出了空间存放数据。</p>
+<p>下图显示了阻塞同步算法应用在共享数据结构的行为：</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-1.png" alt="阻塞同步算法应用于共享数据结构"></p>
+<h3 id="非阻塞同步算法">非阻塞同步算法</h3><p>非阻塞同步算法使得某个线程执行操作不会阻塞尝试执行相同操作的线程，当前执行线程会通知其他线程当前无法执行操作。Java提供了很多非阻塞的数据结构，比如<a href="http://tutorials.jenkov.com/java-util-concurrent/atomicboolean.html" target="_blank" rel="external">AtomicBoolean</a>,<a href="http://tutorials.jenkov.com/java-util-concurrent/atomicinteger.html" target="_blank" rel="external">AtomicInteger</a>,<a href="http://tutorials.jenkov.com/java-util-concurrent/atomiclong.html" target="_blank" rel="external">AtomicLong</a>.</p>
+<p>下图显示了非阻塞算法应用在共享数据结构的行为:</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-2.png" alt="非阻塞同步算法应用于共享数据结构"></p>
+<h3 id="非阻塞算法_VS_阻塞算法">非阻塞算法 VS 阻塞算法</h3><p>非阻塞算法与阻塞算法的最大不同在于阻塞算法会阻塞其他线程而非阻塞算法将通知其他线程操作不可执行。</p>
+<p>阻塞算法会阻塞线程直到该线程请求的操作可以执行。通常一个线程执行请求的操作需要其他线程执行相关的操作，一旦由于某些原因其他线程被阻塞的话，那么该线程也将一直被阻塞直到其他线程最终启动执行必要的操作。比如说线程A向一个满的阻塞队列中插入数据时会发生阻塞直到其他线程从该队列中取出数据。如果由于某些原因其他线程被阻塞了，那么线程A将一直保持阻塞直到其他线程最终从该队列中提取数据。<br><br></p>
+<h3 id="非阻塞同步数据结构">非阻塞同步数据结构</h3><p>在多线程系统中，线程间都是通过一些数据结构进行通信。这些数据结构包括简单的数据类型和复杂数据结构如queues，maps，stacks等等。为了使多个线程能正确，同步的访问这些数据结构，那么它们就必须被同步算法守护，而这些同步算法就使得该数据结构成为了同步数据结构。</p>
+<p>如果守护算法会使线程阻塞的话，那么该算法就是阻塞算法，该数据结构就是阻塞同步数据结构。</p>
+<p>如果守护算法不会使线程阻塞的话，那么该算法就是非阻塞算法，该数据结构就是非阻塞同步数据结构。</p>
+<p>每一个同步数据结构都支持特定的线程通信方式，采用哪一种同步数据结构取决于具体的需求。接下来我将介绍几种非阻塞同步数据结构以及它们的应用场景，通过讲解这些非阻塞数据结构的工作机制可以让你了解它们的设计和实现原理。<br><br></p>
+<h3 id="Volatile变量">Volatile变量</h3><p>volatile变量将使线程直接从主存中读取该变量的值，当一个新值被赋给该变量时，那么这个新值将直接写到主存中。这就保证该变量的最新值对于其他线程是可见的，其他线程将直接从主存读取该变量的值而不是从CPU寄存器或CPU缓存中读取。</p>
+<p>Volatile变量是非阻塞的，对该变量的赋值是原子操作即无法被打断。但是对volatile变量的read-update-write操作却不是原子性的。因此如果有多个线程执行这个操作时就会发生竞争:</p>
+<figure class="highlight nix"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">volatile <span class="variable">myVar =</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">...</span><br><span class="line">int <span class="variable">temp =</span> myVar;</span><br><span class="line">temp++;</span><br><span class="line"><span class="variable">myVar =</span> temp;</span><br></pre></td></tr></table></figure>
+<p>首先myVar的值从主存中读取并把值赋给了temp变量，然后temp加1，最后temp的值赋给myVar意味着这个新值被立即写到主存中的myVar变量上。</p>
+<p>如果两个线程执行上述代码的话，两个线程同时读取myVar的值，分别赋给该线程的temp变量，然后temp加1并将新值写入主存中，那么现在myVar的新值可能就是1而不是2了。</p>
+<p>你可能会说你不会写出这种代码，但是你要注意上面的代码与下面这句代码是等效的:</p>
+<figure class="highlight brainfuck"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">myVar</span><span class="literal">+</span><span class="literal">+</span><span class="comment">;</span></span><br></pre></td></tr></table></figure>
+<p>当执行上面这句代码时，myVar的值被加载到CPU缓存或者寄存器中，然后执行加1操作并将新值写入主存中。<br><br></p>
+<h4 id="单写线程的例子">单写线程的例子</h4><p>在某些情况下对于某个共享数据只有一个写线程和多个读线程，那么当写线程更新该数据并且多个读线程读取该数据就不会发生竞争。在这种情况下你可以使用volatile变量。</p>
+<p>竞争只会发生在多个线程对同一个共享对象执行read-update-set操作，如果你只有一个线程执行该操作，其他线程都只是读取该共享对象的值的话就不会发生竞争。</p>
+<p>下面是一个Counter类，它没有使用同步块但仍然是同步的因为只有一个写线程对其执行更新计数操作：</p>
+<figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">public class <span class="type">SingleWriterCounter</span> &#123;</span><br><span class="line"></span><br><span class="line">    private volatile long count = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Only</span> one thread may ever call this <span class="keyword">method</span>,</span><br><span class="line">     * <span class="keyword">or</span> it will lead to race conditions.</span><br><span class="line">     */</span><br><span class="line">    public <span class="type">void</span> inc() &#123;</span><br><span class="line">        this.count++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Many</span> reading threads may call this <span class="keyword">method</span></span><br><span class="line">     * @<span class="keyword">return</span></span><br><span class="line">     */</span><br><span class="line">    public long count() &#123;</span><br><span class="line">        <span class="keyword">return</span> this.count;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>多个线程同时访问这个counter类对象，但其中只有一个线程调用inc方法。这里的一个线程指的是同一个线程，多个线程可以同时调用count方法，这种情况不会发生竞争。</p>
+<p>下图显示了多个线程如何操作该counter对象：</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-3.png" alt="多个线程操作counter对象"></p>
+<h4 id="更多基于volatile变量的复杂数据结构">更多基于volatile变量的复杂数据结构</h4><p>我们也可以创建包含多个volatile变量的数据结构，其中每个volatile变量只准被同一个线程修改但可以被多个线程读取，这里的同一个线程是指每个volatile变量都可以被一个不同的线程修改，比如说A变量可以被线程1修改且只允许被线程1修改。使用这种数据结构就允许多个线程以非阻塞方式执行。</p>
+<p>下面的Counter类就允许多个写线程执行：</p>
+<figure class="highlight nimrod"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">public class <span class="type">DoubleWriterCounter</span> &#123;</span><br><span class="line"></span><br><span class="line">    private volatile long countA = <span class="number">0</span>;</span><br><span class="line">    private volatile long countB = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Only</span> one (<span class="keyword">and</span> the same <span class="keyword">from</span> thereon) thread may ever call this <span class="keyword">method</span>,</span><br><span class="line">     * <span class="keyword">or</span> it will lead to race conditions.</span><br><span class="line">     */</span><br><span class="line">    public <span class="type">void</span> incA() &#123; this.countA++;  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Only</span> one (<span class="keyword">and</span> the same <span class="keyword">from</span> thereon) thread may ever call this <span class="keyword">method</span>,</span><br><span class="line">     * <span class="keyword">or</span> it will lead to race conditions.</span><br><span class="line">     */</span><br><span class="line">    public <span class="type">void</span> incB() &#123; this.countB++;  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Many</span> reading threads may call this <span class="keyword">method</span></span><br><span class="line">     */</span><br><span class="line">    public long countA() &#123; <span class="keyword">return</span> this.countA; &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    /**</span><br><span class="line">     * <span class="type">Many</span> reading threads may call this <span class="keyword">method</span></span><br><span class="line">     */</span><br><span class="line">    public long countB() &#123; <span class="keyword">return</span> this.countB; &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>正如你所见，DoubleWriterCounter类有两个volatile变量以及两对inc方法和count方法。这里只允许一个线程调用incA方法，一个线程调用incB方法。这样该类就允许两个线程同时调用incA和incB方法，其他线程调用countA和countB方法，这不会引起竞争。</p>
+<p>这个DoubleWriterCounter类可以用于两个线程之间的通信。countA和countB可以表示任务的产生和执行数量。下图显示了两个线程如何利用DoubleWriterCounter类进行交互:</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-4.png" alt="线程交互"></p>
+<p>细心的读者可能会发现DoubleWriterCounter类的功能也可以由两个SingleWriterCounter来实现。你可以根据你的需求使用任意数量的SingleWriterCounter。<br><br></p>
+<h3 id="基于乐观锁的CAS">基于乐观锁的CAS</h3><p>如果现在有多个线程需要对共享对象进行写操作，则单纯依靠volatile变量就不可行。你可能需要对变量的访问进行控制，做法是使用synchronized同步块:</p>
+<figure class="highlight gradle"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> SynchronizedCounter &#123;</span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">count</span> = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> inc() &#123;</span><br><span class="line">        <span class="keyword">synchronized</span>(<span class="keyword">this</span>) &#123;</span><br><span class="line">            <span class="keyword">count</span>++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">long</span> <span class="keyword">count</span>() &#123;</span><br><span class="line">        <span class="keyword">synchronized</span>(<span class="keyword">this</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>.<span class="keyword">count</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意到inc方法和count方法都是同步方法，但是我们希望避免使用synchronized关键字和wait-notify方法。在这里我们可以采用java提供的原子变量，现在我们就用AtomicLong来改写上面的Counter类:</p>
+<figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">import java.util.concurrent.atomic.AtomicLong;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AtomicCounter</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> AtomicLong <span class="keyword">count</span> = <span class="keyword">new</span> AtomicLong(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> inc() &#123;</span><br><span class="line">        <span class="keyword">boolean</span> updated = <span class="keyword">false</span>;</span><br><span class="line">        <span class="keyword">while</span>(!updated)&#123;</span><br><span class="line">            <span class="keyword">long</span> prevCount = <span class="keyword">this</span>.<span class="keyword">count</span>.get();</span><br><span class="line">            updated = <span class="keyword">this</span>.<span class="keyword">count</span>.compareAndSet(prevCount, prevCount + <span class="number">1</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">long</span> <span class="keyword">count</span>() &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.<span class="keyword">count</span>.get();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这个版本的Counter相比上一个版本来说是线程安全的。这个版本中我们感兴趣的是inc方法的实现，inc方法没有使用synchronized同步块，而是如下几行代码:</p>
+<figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">boolean</span> updated = <span class="keyword">false</span>;</span><br><span class="line"><span class="keyword">while</span>(!updated)&#123;</span><br><span class="line">    <span class="keyword">long</span> prevCount = <span class="keyword">this</span>.<span class="keyword">count</span>.get();</span><br><span class="line">    updated = <span class="keyword">this</span>.<span class="keyword">count</span>.compareAndSet(prevCount, prevCount + <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面几行不是原子操作，这就意味着可以有两个不同的线程同时调用inc方法并且执行long preCount = this.count.get()方法，这样两个线程都获取了当前count的值，现在还没有发生竞争。</p>
+<p>秘密就在while循环的第二行，compareAndSet方法是一个原子方法，它比较当前值和期望值，如果两个值相等，则将新值赋给count对象。compareAndSet方法就是典型的被CPU CAS指令直接支持的方法，因此在这里没有必要使用同步算法并且没有线程会被阻塞，这就降低了线程阻塞造成的性能损失。</p>
+<p>假设当前count值为20，现在两个线程同时获取了该count值并且调用compareAndSet(20,20+1)，由于compareAndSet方法是原子方法，那么两个线程将相继执行该方法。</p>
+<p>首先第一个线程将比较当前值(20)是否与期望值(20)相等,很显然现在确实相等，所以count被赋予了新值21并且updated设置为true，该线程退出while循环。</p>
+<p>现在第二个线程调用compareAndSet(20,21),由于现在count的当前值是21了，所以这个调用会失败，updated依然为false，那么循环继续。下一次循环中第二个线程重新获取count的值为21，现在它将再次调用compareAndSet(21,22)，现在调用就会成功，并且count的值变为22，如果没有其他线程调用inc方法的话，count的最终值将为22.<br><br></p>
+<h4 id="为什么叫做乐观锁">为什么叫做乐观锁</h4><p>上一节中的代码就叫做乐观锁，乐观锁与传统的锁机制不同，它有时候也叫做悲观锁。传统的锁会通过同步块或者其他锁方法而使线程阻塞。乐观锁就允许所有线程获得共享对象的拷贝而不会发生阻塞，随后线程对拷贝对象做修改随后尝试将修改后的新值写回到共享对象中去。如果现在没有其他贤臣对该对象做出修改，那么该修改线程可以通过CAS操作将新值写回到共享对象中，如果其他线程已经对对象做出了修改的话，那么该线程就将获得一份新的拷贝，然后对拷贝作出修改并重新写回到对象中去。</p>
+<p>之所以叫做乐观锁是因为每个线程都获得了共享对象的一份拷贝并对其做出修改，然后将其写回到共享对象上去。基于没有其他线程对对象做出修改这个乐观假设，如果这个假设成立，则线程可以将修改写回到对象中，如果假设不成立，则整个操作作废，但是却没有线程被阻塞。</p>
+<p>乐观锁适用于在共享对象上有较低或中等的争议点的情形。如果争议点很多的话线程就会花费大量的CPU时间和内存获取共享对象的拷贝并对其做出修改，但是由于争议点很多使得此次修改无法写回到共享对象上。所以在使用乐观锁时，如果共享对象上有很多争议点的话我们应该想办法减少争议点。<br><br></p>
+<h4 id="乐观锁是非阻塞的">乐观锁是非阻塞的</h4><p>上面所讲的乐观锁是非阻塞的。如果一个线程获取了共享对象的拷贝并且在修改对象值的时候被阻塞了，但不会影响其他线程访问共享对象。</p>
+<p>在传统的上锁/解锁实例中，一个线程获取了某对象的锁后其他试图访问该对象的线程都会被阻塞，如果持有该对象锁的线程被阻塞的话，那么其他线程将一直被阻塞下去，有可能是永久阻塞。<br><br></p>
+<h3 id="非可交换数据结构">非可交换数据结构</h3><p>简单的CAS乐观锁适合于共享对象可以被一个新的值交换的情况。但是有时候交换整个共享对象的数据结构不切实际并且缺乏灵活性。</p>
+<p>想像一下共享对象是一个队列的话，每个线程如果想对队列中某个数据进行修改的话都将获取一份完整的队列的拷贝然后对拷贝做相应的修改。这可以通过AtomicReference来实现，首先获取这个reference，然后拷贝整个队列并做出修改，然后将reference引用指向新创建的队列。</p>
+<p>然而，一个很大的数据结构的拷贝需要大量的内存和CPU时间，这将使你的程序消耗大量的计算机资源，如果数据结构上的争议点很多的话问题更严重。更要命的是，线程拷贝和修改对象的时间越长，那么其他线程已经对该对象做出修改的可能性就越高，这样线程的拷贝以及修改就全部作废并需要重新拷贝新的数据，这将大大增加程序的内存和CPU消耗。</p>
+<p>下一章将介绍一种实现非阻塞数据结构的方法可以使得线程同步更新而不仅仅是拷贝和修改。<br><br></p>
+<h3 id="共享目标修改对象(Sharing_Intended_Modifications)">共享目标修改对象(Sharing Intended Modifications)</h3><p>现在线程不会拷贝和修改整个共享对象，而是会共享关于共享对象的目标修改对象。那么线程想对共享对象做出修改的话就按照如下流程：</p>
+<ol>
+<li>检查是否有其他对象对共享对象提交了目标修改</li>
+<li>如果没有的话，创建一个目标修改(就是一个普通对象),然后调剂这个目标修改给共享对象(通过CAS操作)</li>
+<li>在共享对象上实施目标修改</li>
+<li>移除该目标修改对象的引用来向其他线程发送信号表示对象已执行修改。</li>
+</ol>
+<p>正如你所看见的，第二步将阻塞其他线程提交目标修改对象，也就相当于对共享数据结构上锁。如果一个线程提交了目标修改对象的话，其他线程只能等到第一个提交的目标修改对象被执行才能提交目标修改对象。</p>
+<p>如果一个线程提交了目标修改对象后在执行修改操作时被阻塞的话，共享数据结构就被上锁了。共享的数据结构不会直接阻塞线程，线程检测到它们不能提交目标修改时可以执行其他操作，很显然这是我们需要完善的地方。<br><br></p>
+<h4 id="可完成的目标修改对象">可完成的目标修改对象</h4><p>为了防止提交的目标修改阻塞共享数据结构，目标修改必须包含足够的信息给其他线程来完成修改。因此如果提交了目标修改对象的线程没有完成修改的话，其他线程可以代表它继续完成修改并且使得共享对象可以继续被其他线程使用。</p>
+<p>下图描述了上面描述的非阻塞算法:</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-5.png" alt="非阻塞算法"></p>
+<p>修改必须由一个或多个CAS操作来完成，如果两个线程试图在共享对象上实施目标修改的话，只有一个线程可以执行CAS操作来执行修改，而第一个线程执行修改完成后另一个线程尝试执行CAS操作的话就会失败。<br><br></p>
+<h3 id="A-B-A问题">A-B-A问题</h3><p>上面的算法会导致A-B-A问题，意思是变量的值从A变为B又变回了A，其他线程察觉不到这个变化。</p>
+<p>比如线程A检查当前正在执行的修改，如果当前没有修改的话线程A将拷贝数据，此时线程调度器暂停了线程A的执行并开启线程B，那么线程B此时也可以拷贝相同的数据，并对该数据结构执行了一次完整的修改，最后移除了对目标修改对象的引用。随后线程A继续执行，但是线程B对数据的修改没有通知到线程A，线程A认为数据没有被修改，但数据已经被线程B修改过了，此时线程A所拷贝的数据已经过时了，所以线程A的执行结果会覆盖线程B的执行结果。</p>
+<p>下图显示了A-B-A问题的场景:</p>
+<p><img src="http://tutorials.jenkov.com/images/java-concurrency/non-blocking-algorithms-6.png" alt="A-B-A问题"></p>
+<h4 id="A-B-A问题的解决方式">A-B-A问题的解决方式</h4><p>解决A-B-A问题的通用方法是不仅仅只交换目标修改对象的指针，而是将指针与一个计数器相结合，这样即使目标修改对象的指针归位，但是计数器的值不为0则表示数据已经被修改了，这样可以使这次修改对其他线程可见。</p>
+<p>在java中提供了<a href="http://tutorials.jenkov.com/java-util-concurrent/atomicstampedreference.html" target="_blank" rel="external">AtomicStampedReference</a>类，该类可以利用CAS操作交换一个引用和一个版本戳。<br><br></p>
+<h3 id="一个非阻塞算法的示例">一个非阻塞算法的示例</h3><p>下面就是一个非阻塞算法的代码实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.util.concurrent.atomic.AtomicBoolean;</span><br><span class="line"><span class="keyword">import</span> java.util.concurrent.atomic.AtomicStampedReference;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NonblockingTemplate</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">IntendedModification</span> </span>&#123;</span><br><span class="line">        <span class="keyword">public</span> AtomicBoolean completed =</span><br><span class="line">                <span class="keyword">new</span> AtomicBoolean(<span class="keyword">false</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> AtomicStampedReference&lt;IntendedModification&gt;</span><br><span class="line">        ongoingMod =</span><br><span class="line">            <span class="keyword">new</span> AtomicStampedReference&lt;IntendedModification&gt;(<span class="keyword">null</span>, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//declare the state of the data structure here.</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">modify</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">while</span>(!attemptModifyASR());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">attemptModifyASR</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">boolean</span> modified = <span class="keyword">false</span>;</span><br><span class="line">    </span><br><span class="line">        IntendedModification currentlyOngoingMod =</span><br><span class="line">        ongoingMod.getReference();</span><br><span class="line">        <span class="keyword">int</span> stamp = ongoingMod.getStamp();</span><br><span class="line">    </span><br><span class="line">        <span class="keyword">if</span>(currentlyOngoingMod == <span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="comment">//copy data structure state - for use</span></span><br><span class="line">            <span class="comment">//in intended modification</span></span><br><span class="line">        </span><br><span class="line">            <span class="comment">//prepare intended modification</span></span><br><span class="line">            IntendedModification newMod =</span><br><span class="line">            <span class="keyword">new</span> IntendedModification();</span><br><span class="line">        </span><br><span class="line">            <span class="keyword">boolean</span> modSubmitted = </span><br><span class="line">                ongoingMod.compareAndSet(<span class="keyword">null</span>, newMod, stamp, stamp + <span class="number">1</span>);</span><br><span class="line">        </span><br><span class="line">            <span class="keyword">if</span>(modSubmitted)&#123;</span><br><span class="line">            </span><br><span class="line">                <span class="comment">//complete modification via a series of compare-and-swap operations.</span></span><br><span class="line">                <span class="comment">//note: other threads may assist in completing the compare-and-swap</span></span><br><span class="line">                <span class="comment">// operations, so some CAS may fail</span></span><br><span class="line">            </span><br><span class="line">                modified = <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">    </span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">//attempt to complete ongoing modification, so the data structure is freed up</span></span><br><span class="line">            <span class="comment">//to allow access from this thread.</span></span><br><span class="line">        </span><br><span class="line">            modified = <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    </span><br><span class="line">        <span class="keyword">return</span> modified;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><br></p>
+<h3 id="非阻塞算法实现困难">非阻塞算法实现困难</h3><p>非阻塞算法很难设计与实现，在尝试自己设计非阻塞算法前可以先去搜索一下是否有人已经实现了正确的非阻塞算法。Java提供了很多非阻塞算法的实现，比如CocurrentLinkedQueue，以后也会提供更多的非阻塞算法的实现。</p>
+<p>除了java提供的算法实现，其他第三方也提供了很多非阻塞的算法实现，比如LMAX Disruptor。更多介绍可以参考<a href="http://tutorials.jenkov.com/java-concurrency/references.html" target="_blank" rel="external">Java concurrency references page</a>这篇博客。<br><br></p>
+<h3 id="非阻塞算法的优点">非阻塞算法的优点</h3><p>非阻塞算法有很多的优点，下面重点讲一下以下几个优点。</p>
+<ol>
+<li>当线程请求操作无法被执行时，我们可以定义这种情况下线程可以执行的操作而不是阻塞等待。</li>
+<li>不会发生死锁</li>
+<li>没有线程阻塞</li>
+<li>减少线程延迟</li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+	<div class="article-share" id="share">
+	
+	  <div data-url="http://yoursite.com/2015/05/12/译-java多线程与同步机制系列(27)/" data-title="[译]java多线程与同步机制系列(27)--非阻塞算法 | 朱家骅的Blog" data-tsina="1685825420" class="share clearfix">
+	  </div>
+	
+	</div>
+
+
+</footer>
+
+   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/05/11/译-java多线程与同步机制系列(26)/"  title="[译]java多线程与同步机制系列(26)--同步块的内部组成">
+ <strong>下一篇：</strong><br/> 
+ <span>[译]java多线程与同步机制系列(26)--同步块的内部组成
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+<section id="comments" class="comment">
+	<div class="ds-thread" data-thread-key="2015/05/12/译-java多线程与同步机制系列(27)/" data-title="[译]java多线程与同步机制系列(27)--非阻塞算法" data-url="http://yoursite.com/2015/05/12/译-java多线程与同步机制系列(27)/"></div>
+</section>
+
+
+</div>  
+      <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">文章目录</strong>
+ 
+ <ol class="toc"><li class="toc-item toc-level-3"><a class="toc-link" href="#阻塞同步算法"><span class="toc-number">1.</span> <span class="toc-text">阻塞同步算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞同步算法"><span class="toc-number">2.</span> <span class="toc-text">非阻塞同步算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞算法_VS_阻塞算法"><span class="toc-number">3.</span> <span class="toc-text">非阻塞算法 VS 阻塞算法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞同步数据结构"><span class="toc-number">4.</span> <span class="toc-text">非阻塞同步数据结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Volatile变量"><span class="toc-number">5.</span> <span class="toc-text">Volatile变量</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#单写线程的例子"><span class="toc-number">5.1.</span> <span class="toc-text">单写线程的例子</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#更多基于volatile变量的复杂数据结构"><span class="toc-number">5.2.</span> <span class="toc-text">更多基于volatile变量的复杂数据结构</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基于乐观锁的CAS"><span class="toc-number">6.</span> <span class="toc-text">基于乐观锁的CAS</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#为什么叫做乐观锁"><span class="toc-number">6.1.</span> <span class="toc-text">为什么叫做乐观锁</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#乐观锁是非阻塞的"><span class="toc-number">6.2.</span> <span class="toc-text">乐观锁是非阻塞的</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非可交换数据结构"><span class="toc-number">7.</span> <span class="toc-text">非可交换数据结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#共享目标修改对象(Sharing_Intended_Modifications)"><span class="toc-number">8.</span> <span class="toc-text">共享目标修改对象(Sharing Intended Modifications)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#可完成的目标修改对象"><span class="toc-number">8.1.</span> <span class="toc-text">可完成的目标修改对象</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#A-B-A问题"><span class="toc-number">9.</span> <span class="toc-text">A-B-A问题</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#A-B-A问题的解决方式"><span class="toc-number">9.1.</span> <span class="toc-text">A-B-A问题的解决方式</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#一个非阻塞算法的示例"><span class="toc-number">10.</span> <span class="toc-text">一个非阻塞算法的示例</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞算法实现困难"><span class="toc-number">11.</span> <span class="toc-text">非阻塞算法实现困难</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#非阻塞算法的优点"><span class="toc-number">12.</span> <span class="toc-text">非阻塞算法的优点</span></a></li></ol>
+ 
+  </div>
+
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">归档</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+  </div>
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">分类</p>
+		<ul>
+		
+		  
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>27</sup></a></li>
+		  
+		
+		  
+			<li><a href="/categories/maven/" title="maven">maven<sup>1</sup></a></li>
+		  
+		
+		</ul>
+</div>
+
+
+  <div class="linkslist">
+  <p class="asidetitle">友情链接</p>
+    <ul>
+        
+          <li>
+            
+            	<a href="https://www.csdn.net" target="_blank" title="CSDN">CSDN</a>
+            
+          </li>
+        
+    </ul>
+</div>
+
+  <div class="weiboshow">
+  <p class="asidetitle">新浪微博</p>
+    <iframe width="100%" height="119" class="share_self"  frameborder="0" scrolling="no" src="http://widget.weibo.com/weiboshow/index.php?language=&width=0&height=119&fansRow=2&ptype=1&speed=0&skin=9&isTitle=1&noborder=1&isWeibo=0&isFans=0&uid=1685825420&verifier=f33b37d3&dpc=1"></iframe>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+	
+	<div class="line">
+		<span></span>
+		<div class="author"></div>
+	</div>
+	
+	
+	<section class="info">
+		<p> 大家好，我是朱家骅。 <br/>
+			欢迎来到我的技术博客！！！</p>
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/1685825420" target="_blank" class="icon-weibo" title="微博"></a>
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		<a href="mailto:317560406@qq.com" target="_blank" class="icon-email" title="Email Me"></a>
+		
+	</div>
+			
+		
+
+		<p class="copyright">
+		Powered by <a href="http://hexo.io" target="_blank" title="hexo">hexo</a> and Theme by <a href="https://github.com/wuchong/jacman" target="_blank" title="Jacman">Jacman</a> © 2015 
+		
+		<a href="/about" target="_blank" title="朱家骅">朱家骅</a>
+		
+		
+		</p>
+</div>
+</footer>
+    <script src="/js/jquery-2.0.3.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');      
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else{
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  c.click(function(){
+    ta.css('display', 'block').addClass('fadeIn');
+  });
+  o.click(function(){
+    ta.css('display', 'none');
+  });
+  $(window).scroll(function(){
+    ta.css("top",Math.max(140,320-$(this).scrollTop()));
+  });
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina'),
+      description = $this.attr('description');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#nothing"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="微信"></a>',
+  '<a href="http://widget.renren.com/dialog/share?resourceUrl=' + encodedUrl + '&srcUrl=' + encodedUrl + '&title=' + title +'" class="article-share-renren" target="_blank" title="人人"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="微博"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"flash03"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+}); 
+</script>
+
+
+
+<!-- Analytics Begin -->
+
+
+
+
+
+<!-- Analytics End -->
+
+<!-- Totop Begin -->
+
+	<div id="totop">
+	<a title="返回顶部"><img src="/img/scrollup.png"/></a>
+	</div>
+	<script src="/js/totop.js"></script>
+
+<!-- Totop End -->
+
+<!-- MathJax Begin -->
+<!-- mathjax config similar to math.stackexchange -->
+
+
+<!-- MathJax End -->
+
+<!-- Tiny_search Begin -->
+
+<!-- Tiny_search End -->
+
+  </body>
+</html>
