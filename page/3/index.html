@@ -77,6 +77,75 @@
         <header class="article-info clearfix">
   <h1 itemprop="name">
     
+      <a href="/2015/04/26/译-java多线程与同步机制系列(8)/" title="[译]java多线程与同步机制系列(8)--线程安全与不变性" itemprop="url">[译]java多线程与同步机制系列(8)--线程安全与不变性</a>
+  </h1>
+  <p class="article-author">By
+       
+		<a href="/about" title="朱家骅" target="_blank" itemprop="author">朱家骅</a>
+		
+  <p class="article-time">
+    <time datetime="2015-04-26T12:20:03.000Z" itemprop="datePublished"> 发表于 2015-04-26</time>
+    
+  </p>
+</header>
+    <div class="article-content">
+        
+        <p>原文链接(<a href="http://tutorials.jenkov.com/java-concurrency/thread-safety-and-immutability.html" target="_blank" rel="external">http://tutorials.jenkov.com/java-concurrency/thread-safety-and-immutability.html</a>)</p>
+<p>竞争只发生在多个线程对共享数据执行写操作的时候，如果仅仅是读数据的话不会发生竞争。我们可以通过将共享对象设计为不可变来让其能够被多个线程共享且数据不变，比如：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ImmutableValue</span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> <span class="keyword">value</span> = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">ImmutableValue</span><span class="params">(<span class="keyword">int</span> <span class="keyword">value</span>)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.<span class="keyword">value</span> = <span class="keyword">value</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.<span class="keyword">value</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从代码中我们可以看到，ImmutableValue的值由构造函数传入的value决定，同时也注意到这个类没有setter。这就意味着一旦一个ImmutableVa对象构建完成之后，你就无法改变value的值。你能做的仅仅是通过getValue方法获取value的值。</p>
+<p>如果你需要操作这个ImmutableValue对象的值的话，你可以在操作方法中返回一个新值而保持旧的value值不变，如下所示：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">ImmutableValue</span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> <span class="keyword">value</span> = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">ImmutableValue</span><span class="params">(<span class="keyword">int</span> <span class="keyword">value</span>)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.<span class="keyword">value</span> = <span class="keyword">value</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.<span class="keyword">value</span>;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  </span><br><span class="line">      <span class="function"><span class="keyword">public</span> ImmutableValue <span class="title">add</span><span class="params">(<span class="keyword">int</span> valueToAdd)</span></span>&#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">new</span> ImmutableValue(<span class="keyword">this</span>.<span class="keyword">value</span> + valueToAdd);</span><br><span class="line">      &#125;</span><br><span class="line">  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上面代码中的add方法是对value执行加操作，但是这里返回的是一个新的ImmutableValue对象，而原对象保持不变。</p>
+<h3 id="引用不一定线程安全的">引用不一定线程安全的</h3><p>我们需要注意的一点是即使对象是不变的或者说是线程安全的，但是对该对象的引用可能不是线程安全的，下面看一个例子：</p>
+<figure class="highlight cs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title">Calculator</span>&#123;</span><br><span class="line">  <span class="keyword">private</span> ImmutableValue currentValue = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> ImmutableValue <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> currentValue;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setValue</span><span class="params">(ImmutableValue newValue)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.currentValue = newValue;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">(<span class="keyword">int</span> newValue)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.currentValue = <span class="keyword">this</span>.currentValue.add(newValue);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Calculator类有一个指向ImmutableValue对象的引用currentValue，从代码中我们可以看出，setValue方法和add方法都会改变currentValue这个引用。所以，虽然Calculator内部持有一个对不变对象的引用，可是它本身确是可变的即非线程安全的。换句话说就是，ImmutableValue对象是线程安全的，但是对它的使用却不是线程安全的。我们在试图通过不变性来保证线程安全时一定要注意这一点。</p>
+<p>如果想确保Calculator类是线程安全的话，那么就需要对getValue方法，setValue方法和add方法做同步处理(synchronized)，修改后代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Calculator</span></span>&#123;</span><br><span class="line">  <span class="keyword">private</span> ImmutableValue currentValue = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> ImmutableValue <span class="keyword">synchronized</span> <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> currentValue;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="keyword">synchronized</span> <span class="title">setValue</span><span class="params">(ImmutableValue newValue)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.currentValue = newValue;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="keyword">synchronized</span> <span class="title">add</span><span class="params">(<span class="keyword">int</span> newValue)</span></span>&#123;</span><br><span class="line">    <span class="keyword">this</span>.currentValue = <span class="keyword">this</span>.currentValue.add(newValue);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+        
+        
+        <p class="article-more-link">
+          
+       </p>
+    </div>
+    <footer class="article-footer clearfix">
+<div class="article-catetags">
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/Java多线程/">Java多线程</a>
+</div>
+
+
+</div>
+
+
+
+
+<div class="comments-count">
+	
+	  	<span></span>
+		<a href="/2015/04/26/译-java多线程与同步机制系列(8)/#comments" class="ds-thread-count comments-count-link" data-thread-key="2015/04/26/译-java多线程与同步机制系列(8)/" data-count-type="comments">&nbsp;</a>
+	
+</div>
+
+</footer>
+
+
+    </article>
+
+
+
+
+
+
+   
+    
+    <article class="post-expand post" itemprop="articleBody"> 
+        <header class="article-info clearfix">
+  <h1 itemprop="name">
+    
       <a href="/2015/04/26/译-java多线程与同步机制系列(7)/" title="[译]java多线程与同步机制系列(7)--线程安全与共享资源" itemprop="url">[译]java多线程与同步机制系列(7)--线程安全与共享资源</a>
   </h1>
   <p class="article-author">By
@@ -745,7 +814,7 @@ Thread <span class="number">2</span> inserts <span class="keyword">record</span>
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">归档</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">15</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">16</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/04/">四月 2015</a><span class="archive-list-count">13</span></li></ul>
   </div>
 
 
@@ -755,7 +824,7 @@ Thread <span class="number">2</span> inserts <span class="keyword">record</span>
 		<ul>
 		
 		  
-			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>27</sup></a></li>
+			<li><a href="/categories/Java多线程/" title="Java多线程">Java多线程<sup>28</sup></a></li>
 		  
 		
 		  
